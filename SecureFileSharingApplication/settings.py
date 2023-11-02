@@ -18,6 +18,7 @@ import os
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
 
@@ -33,12 +34,13 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
+    "django.contrib.admin",
+    "FileApp",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
 ]
 
 MIDDLEWARE = [
@@ -76,9 +78,14 @@ WSGI_APPLICATION = 'SecureFileSharingApplication.wsgi.application'
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
 
 
-from decouple import Config
+from decouple import Config, RepositoryEnv
 
-config = Config()
+# Dynamically get env path on file system , pyt .env in root folder 
+env_path = os.path.join(BASE_DIR, '.env')
+
+# Use the dynamically obtained env_path to create the Config object
+
+config  = Config(RepositoryEnv(env_path))
 
  # take environment variables from .env.
  
