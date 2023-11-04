@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from django.http import HttpResponse
+from .forms import UploadFileForm
 
 # TODO: Make home page where navigation bar contains sign up / login
 def home(request):
@@ -23,4 +24,13 @@ def profile(request):
 
 # TODO: Here you will be able to upload a file for that user
 def upload_file(request):
-    return render(request, "upload_file.html")
+    if request.method == "POST":
+        form = UploadFileForm(request.POST, request.FILES)
+        #TODO: Handle checking file integrity here and create file object to save after checking
+        if form.is_valid():
+            # file_instance = File(file=request.FILES["file"])
+            # file_instance.save()
+            return HttpResponse("Successful upload")
+    else:
+        form = UploadFileForm()
+    return render(request, "upload_file.html", {"form": form})
