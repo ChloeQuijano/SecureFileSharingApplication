@@ -33,6 +33,7 @@ class SharedFile(models.Model):
     file = models.ForeignKey(File, on_delete=models.CASCADE)
     access_date = models.DateTimeField(auto_now=True) # optional
     permission = models.CharField(max_length=50)  # We can use this field to specify the level of access (e.g., read, edit, delete)
+    file_name = models.CharField(max_length=255)
     
     def __str__(self):
         return f"{self.user.username} - {self.file.file_name} ({self.permission})"
