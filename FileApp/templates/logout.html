@@ -1,0 +1,11 @@
+{% extends './base.html' %}
+
+{% block contents %}
+
+    <h4>Logged out</h4>
+
+    <p>
+        <a href="{% url 'file_app:login' %}">Log in again</a>
+    </p>
+
+{% endblock contents %}

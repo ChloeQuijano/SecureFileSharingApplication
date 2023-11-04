@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+{% extends './base.html' %}
+
+{%block title%}
+Profile
+{%endblock title%}
+
+{%block contents%}
+
+{%csrf_token%}
+<div>
+    <h1>User Files</h1>
+    <ul>
+        {% for file in files %}
+            <li>
+                {{ file.name }} - ${{ file.size }}
+                <!-- TODO: Add button for sharing the file -->
+            </li>
+        {% endfor %}
+    </ul>
+</div>            
+
+{%endblock contents%}

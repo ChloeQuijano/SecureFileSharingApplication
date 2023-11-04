@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+{% extends './base.html' %}
+
+{%block title%}
+Login
+{%endblock title%}
+
+{%block contents%}
+{%if error%}
+<div class="alert alert-danger" role="alert">
+    {{error}}
+</div>
+{%endif%}
+<form method="post">
+    {%csrf_token%}
+    <div class="row lg-3">
+        <div class="col-sm-6 {%if center%} mx-auto {%endif%}">
+            {% for field in form %}
+            <div class="form-group mb-3">
+                {{field}}
+                {% if field.errors %}
+                {% for error in field.errors %}
+                <span class="invalid-feedback {%if error%}d-block{%endif%}">{{error}}</span>
+                {% endfor %}
+                {%endif%}
+            </div>
+            {% endfor %}
+        </div>    
+    </div>            
+    <input class="btn btn-primary" type="submit" value="Login">
+</form>
+
+<div class="my-2">
+    <small class="text-muted">
+        Need an account ? <a class="ml-2" href="{%url 'file_app:register'%}">Sign Up</a>
+    </small>
+</div>
+{%endblock contents%}
