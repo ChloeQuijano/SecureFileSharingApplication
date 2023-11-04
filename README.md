@@ -4,8 +4,12 @@ SEP300 Group Assignment 1: Secure File Sharing Application
 Django application with PostgresSQL database that allows secure file sharing between users
 
 ## Run the app
-`pip install -r requirements.txt`
-`py manage.py runserver`
+```
+pip install -r requirements.txt
+py manage.py makemigrations
+py manage.py migrate
+py manage.py runserver
+```
 
 ## Assignment Tasks
 - User Registration and Authentication:
@@ -32,3 +36,8 @@ Other Instructions:
 - Ensure the application is user-friendly and includes informative error handling.
 - Use secure coding practices to prevent common vulnerabilities (e.g., SQL injection, XSS attacks)
 
+## Running tests
+
+Files for test cases are in tests folder
+
+`./manage.py test`
