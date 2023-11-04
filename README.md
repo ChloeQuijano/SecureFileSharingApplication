@@ -40,4 +40,4 @@ Other Instructions:
 
 Files for test cases are in tests folder
 
-`./manage.py test`
+`py manage.py test`
