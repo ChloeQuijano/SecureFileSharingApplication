@@ -9,15 +9,19 @@ Profile
 
 {%csrf_token%}
 <div>
-    <h1>User Files</h1>
-    <ul>
-        {% for file in files %}
-            <li>
-                {{ file.name }} - ${{ file.size }}
-                <!-- TODO: Add button for sharing the file -->
-            </li>
-        {% endfor %}
-    </ul>
+    {%if request.user.is_authenticated %}
+  			<h1>{{ request.user.username | title }}'s Files</h1>
+            <ul>
+                {% for file in files %}
+                    <li>
+                        {{ file.name }} - ${{ file.size }}
+                        <!-- TODO: Add button for sharing the file -->
+                    </li>
+                {% endfor %}
+            </ul>
+  	{%else%}
+            <h3> You are not logged in </h3>
+  	{%endif%}
 </div>            
 
 {%endblock contents%}
