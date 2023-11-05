@@ -12,6 +12,7 @@ Register
 </div>
 {%endif%}
 <form method="POST">
+    {% csrf_token %}
     <div class="row lg-3">
         <div class="col-sm-6 {%if center%} mx-auto {%endif%}">
             <!-- {{ form.as_p }} -->
@@ -23,6 +24,17 @@ Register
                     {% endfor %}
                 {%endif%}
                 {{ field.label_tag }} {{ field }}
+                {% if field.name == "password1" %}
+                    <span class="helptext">
+                        <ul>
+                            <li>Your password can’t be too similar to your other personal information.</li>
+                            <li>Your password must contain at least 8 characters.</li>
+                            <li>Your password must contain at least one upper case, lower case, digit and special char "!@#$&/".</li>
+                            <li>Your password can’t be entirely numeric.</li>
+                      </ul>
+                    </span>
+    {%endif%}
+
             </div>
             {% endfor %}
         </div>    
