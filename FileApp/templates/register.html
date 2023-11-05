@@ -11,17 +11,18 @@ Register
     {{error}}
 </div>
 {%endif%}
-<form method="post">
+<form method="POST">
     <div class="row lg-3">
         <div class="col-sm-6 {%if center%} mx-auto {%endif%}">
+            <!-- {{ form.as_p }} -->
             {% for field in form %}
             <div class="form-group mb-3">
-                {{field}}
                 {% if field.errors %}
-                {% for error in field.errors %}
-                <span class="invalid-feedback {%if error%}d-block{%endif%}">{{error}}</span>
-                {% endfor %}
+                    {% for error in field.errors %}
+                        <span class="invalid-feedback {%if error%}d-block{%endif%}">{{error}}</span>
+                    {% endfor %}
                 {%endif%}
+                {{ field.label_tag }} {{ field }}
             </div>
             {% endfor %}
         </div>    

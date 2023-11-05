@@ -1,33 +1,71 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import HttpResponse
-from .forms import UploadFileForm
+from django.contrib import messages
+from django.contrib.auth import login, authenticate
+from django.contrib.auth.decorators import login_required
+from .forms import UploadFileForm, LoginForm, RegisterForm
+from .models import File
 
-# TODO: Make home page where navigation bar contains sign up / login
+# Home page where navigation bar contains sign up / login links
 def home(request):
     return render(request, "home.html")
 
-# TODO: Register a new user account page
+# Register a new user account page
 def register(request):
-    return render(request, "register.html")
+    if request.method == "GET":
+        form = RegisterForm()
+        return render(request, "register.html", {'form': form})
+    
+    if request.method == "POST":
+        form = RegisterForm(request.POST)
+        if form.is_valid():
+            # TODO: check that inputs are valid for saving a new user model
+            return HttpResponse("Successful registration")
+        else:
+            return render(request, 'register.html', {'form': form})
 
-# TODO: Login page for user
+# Login page for user
 def login(request):
-    return render(request, "login.html")
+    if request.method == "GET":
+        # FIXME: need to check if already logged in and don't need to redo login
+        form = LoginForm()
+        return render(request, "login.html", {'form': form})
+    
+    elif request.method == "POST":
+        form = LoginForm(request.POST)
 
-# TODO: Logout page for user
+        if form.is_valid():
+            username = form.cleaned_data['username']
+            password = form.cleaned_data['password']
+            # TODO: create User authentication
+            messages.success(request,f'Hi {user.username.title()}, welcome back!')
+        
+        # if error occurs 
+        messages.error(request,f'Invalid username or password')
+        return render(request, "login.html", {'form': form})
+
+# Logout page for user
 def logout(request):
-    return render(request, "logout.html")
+    logout(request)
+    messages.success(request, f'You have been logged out.')
+    return redirect("logout.html")
 
-# TODO: After login, can view the files for the user
+# Can view the files for the user
+@login_required
 def profile(request):
-    return render(request, "profile.html")
+    # FIXME: Need to get files ONLY for that user, if not logged in, will prompt user to login instead
+    files = File.objects.all()
+    context = {'files': files}
+    return render(request, "profile.html", context)
 
 # TODO: Here you will be able to upload a file for that user
+@login_required
 def upload_file(request):
     if request.method == "POST":
         form = UploadFileForm(request.POST, request.FILES)
         #TODO: Handle checking file integrity here and create file object to save after checking
         if form.is_valid():
+            # TODO: need to make inputs correct for creating file object
             # file_instance = File(file=request.FILES["file"])
             # file_instance.save()
             return HttpResponse("Successful upload")

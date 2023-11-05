@@ -15,7 +15,8 @@ Login
     {%csrf_token%}
     <div class="row lg-3">
         <div class="col-sm-6 {%if center%} mx-auto {%endif%}">
-            {% for field in form %}
+            {{form.as_p}}
+            <!-- {% for field in form %}
             <div class="form-group mb-3">
                 {{field}}
                 {% if field.errors %}
@@ -24,7 +25,7 @@ Login
                 {% endfor %}
                 {%endif%}
             </div>
-            {% endfor %}
+            {% endfor %} -->
         </div>    
     </div>            
     <input class="btn btn-primary" type="submit" value="Login">
