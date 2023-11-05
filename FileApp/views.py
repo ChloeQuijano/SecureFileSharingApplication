@@ -1,7 +1,7 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render
 from django.http import HttpResponse
 from django.contrib import messages
-from django.contrib.auth import login, authenticate
+from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
 from .forms import UploadFileForm, LoginForm, RegisterForm
 from .models import File
@@ -45,10 +45,10 @@ def login(request):
         return render(request, "login.html", {'form': form})
 
 # Logout page for user
-def logout(request):
+def sign_out(request):
     logout(request)
     messages.success(request, f'You have been logged out.')
-    return redirect("logout.html")
+    return render(request, "login.html")
 
 # Can view the files for the user
 @login_required
