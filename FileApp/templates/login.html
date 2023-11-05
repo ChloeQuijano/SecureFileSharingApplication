@@ -12,7 +12,7 @@ Login
 </div>
 {%endif%}
 <form method="post">
-    {%csrf_token%}
+    {% csrf_token %}
     <div class="row lg-3">
         <div class="col-sm-6 {%if center%} mx-auto {%endif%}">
             {{form.as_p}}
