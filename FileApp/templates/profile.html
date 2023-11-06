@@ -14,8 +14,9 @@ Profile
             <ul>
                 {% for file in files %}
                     <li>
-                        {{ file.name }} - ${{ file.size }}
+                        {{ file.file_name }} - ${{ file.file_size }}
                         <!-- TODO: Add button for sharing the file -->
+                        <a href="{% url 'file_app:share_file' file.id %}">Share</a>
                     </li>
                 {% endfor %}
             </ul>

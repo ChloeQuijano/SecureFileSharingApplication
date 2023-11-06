@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect, reverse
+from django.shortcuts import render, redirect, reverse, get_object_or_404
 from django.http import HttpResponse
 from django.contrib import messages
 from django.contrib.auth.models import User
@@ -6,7 +6,8 @@ from django.contrib.auth import login as auth_login, authenticate, logout
 from django.views.decorators.csrf import csrf_protect, csrf_exempt
 from django.contrib.auth.decorators import login_required
 from .forms import UploadFileForm, LoginForm, RegisterForm
-from .models import File
+from .models import File, SharedFile, FileIntegrity
+from django.contrib.auth.models import User
 
 from .userauth import *
 
@@ -98,7 +99,11 @@ def profile(request):
     # FIXME: Need to get files ONLY for that user, if not logged in, will prompt user to login instead
     # Fixed - if not logged in it will redirect them to the login page (LOGIN_URL added in settings.py) - M
     files = File.objects.filter(owner=request.user)
-    context = {'files': files}
+    # users = User.objects.exclude(id=request.user.id)  # Get all users except the current user
+    context = {
+        'files': files,
+        # 'users': users,  # Add the list of users to the context
+    }
     return render(request, "profile.html", context)
 
 # TODO: Here you will be able to upload a file for that user
@@ -116,3 +121,26 @@ def upload_file(request):
     else:
         form = UploadFileForm()
     return render(request, "upload_file.html", {"form": form})
+
+@login_required
+def share_file(request, file_id):
+    # Get the file object using the file_id
+    file = get_object_or_404(File, id=file_id)  # Fetch the file object
+    users = User.objects.exclude(id=request.user.id)  # Fetch the list of users excluding the current user
+
+    # Check if the file's owner is the current user
+    if file.owner != request.user:
+        messages.error(request, "You can only share your own files.")
+        return redirect('file_app:profile')
+
+    if request.method == 'POST':
+        # Retrieve the selected user's ID from the form
+        selected_user_id = request.POST.get('shared_user')
+        # user_to_share = User.objects.filter(id=selected_user_id).first()
+        #TODO: MORE STUFF TO ADD
+    context = {
+        'file': file,
+        'users': users,
+    }
+
+    return render(request, 'share_file.html', context)
