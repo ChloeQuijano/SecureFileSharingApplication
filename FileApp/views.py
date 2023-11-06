@@ -96,7 +96,8 @@ def sign_out(request):
 @login_required
 def profile(request):
     # FIXME: Need to get files ONLY for that user, if not logged in, will prompt user to login instead
-    files = File.objects.all()
+    # Fixed - if not logged in it will redirect them to the login page (LOGIN_URL added in settings.py) - M
+    files = File.objects.filter(owner=request.user)
     context = {'files': files}
     return render(request, "profile.html", context)
 
