@@ -15,7 +15,8 @@ Profile
                 {% for file in files %}
                     <li>
                         {{ file.file_name }} - ${{ file.file_size }}
-                        <!-- TODO: Add button for sharing the file -->
+                        <!-- TODO: Add button for sharing the file with a dropdown list of users to share to-->
+                        <!-- chloe: it might be more secure to let this only be a text box search? -->
                         <a href="{% url 'file_app:share_file' file.id %}">Share</a>
                     </li>
                 {% endfor %}
