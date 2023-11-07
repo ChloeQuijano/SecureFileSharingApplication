@@ -7,10 +7,13 @@ Upload File
 
 {%block contents%}
 
-{%csrf_token%}
 <div>
-    <h1>Click below to upload a file</h1>
-    <!-- TODO: Add components for uploading file from computer-->
+    <h3>Upload a file below</h3>
+    <form method ='post' enctype ="multipart/form-data">
+        {% csrf_token %}
+        {{form.as_p}}
+        <input type="submit" value = "Submit">
+    </form>
 </div>            
 
 {%endblock contents%}
