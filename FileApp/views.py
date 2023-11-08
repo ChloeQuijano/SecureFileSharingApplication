@@ -119,6 +119,7 @@ def profile(request):
 @login_required
 @csrf_protect
 def upload_file(request):
+    # FIXME : ACCEPT 3MB OR LESS
     if request.method == "POST":
         form = UploadFileForm(request.POST, request.FILES)
         # Handle checking file integrity here and create file object to save after checking
@@ -161,9 +162,10 @@ def share_file(request, file_id):
             permission = form.cleaned_data['permission']
             
             # Check if the file's owner is the current user
-            if file_to_share.owner != request.user:
-                messages.error(request, "You can only share your own files.")
-                return redirect('file_app:profile')
+            #NO NEED, REMOVED SHARED BUTTON FOR NON OWNERS
+            # if file_to_share.owner != request.user:
+            #     messages.error(request, "You can only share your own files.")
+            #     return redirect('file_app:profile')
 
              # Check if a shared file entry with the same user and file already exists
             shared_file, created = SharedFile.objects.get_or_create(
@@ -189,3 +191,8 @@ def share_file(request, file_id):
     }
 
     return render(request, 'share_file.html', context)
+
+
+# TODO: download file
+def download_file(request, file_id):
+    return HttpResponse('TODO')
