@@ -114,18 +114,18 @@ def profile(request):
 
     return render(request, "profile.html", context)
 
-# TODO: Here you will be able to upload a file for that user
+# Here you will be able to upload a file for that user
 @login_required
 @csrf_protect
 def upload_file(request):
     if request.method == "POST":
         form = UploadFileForm(request.POST, request.FILES)
-        #TODO: Handle checking file integrity here and create file object to save after checking
+        # Handle checking file integrity here and create file object to save after checking
         if form.is_valid():
-            # TODO: need to make inputs correct for creating file object
-            # file_instance = File(file=request.FILES["file"])
-            # file_instance.save()
-            return HttpResponse("Successful upload")
+            file_instance = File(file=request.FILES["file"])
+            file_instance.save()
+            messages.success(request, f'File is successfully uploaded.')
+            return redirect(reverse('file_app:profile')) # go back to profile page to see all the files
     else:
         form = UploadFileForm()
     return render(request, "upload_file.html", {"form": form})

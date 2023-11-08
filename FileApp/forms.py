@@ -2,10 +2,11 @@ from django import forms
 from django.contrib.auth.models import User
 from .models import File
 from django.contrib.auth.forms import UserCreationForm
+from FileApp.filevalidate import FileValidation
 
 class UploadFileForm(forms.Form):
     title = forms.CharField(max_length=50)
-    file = forms.FileField()
+    file = forms.FileField(validators=[FileValidation(file_types=('text/plain',))])
 
 class RegisterForm(UserCreationForm):
     class Meta:
