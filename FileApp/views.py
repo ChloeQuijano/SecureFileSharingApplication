@@ -5,6 +5,8 @@ from django.contrib.auth.models import User
 from django.contrib.auth import login as auth_login, authenticate, logout
 from django.views.decorators.csrf import csrf_protect, csrf_exempt
 from django.contrib.auth.decorators import login_required
+
+from FileApp.fileencrypt import FileEncryptor
 from .forms import UploadFileForm, LoginForm, RegisterForm
 from .models import File, SharedFile, FileIntegrity
 from django.contrib.auth.models import User
@@ -124,14 +126,18 @@ def upload_file(request):
         # Handle checking file integrity here and create file object to save after checking
         if form.is_valid():
             try:
-                # Check if a shared file entry with the same user and file already exists
+                # Encrypts the data within the file
+                encryptor=FileEncryptor()
+                encryptor.file_encrypt(form.cleaned_data['file'])
+
+                # Creates a new file and validates its content
                 file_instance = File.objects.create(
                     owner=request.user,
                     file=form.cleaned_data['file'],
                     file_name=form.cleaned_data['title'],
                     file_size=form.cleaned_data['file'].size
                 )
-                #file_instance = File(file=request.FILES["file"])
+                # Saves the file object to database
                 file_instance.save()
                 messages.success(request, f'File is successfully uploaded.')
                 return redirect(reverse('file_app:profile')) # go back to profile page to see all the files
