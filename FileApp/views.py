@@ -8,6 +8,10 @@ from django.contrib.auth.decorators import login_required
 from .forms import UploadFileForm, LoginForm, RegisterForm
 from .models import File, SharedFile, FileIntegrity
 from django.contrib.auth.models import User
+from django.db.models import Q
+from django.core.exceptions import PermissionDenied
+from .forms import ShareFileForm
+
 
 from .userauth import *
 
@@ -96,12 +100,18 @@ def sign_out(request):
 # Can view the files for the user
 @login_required
 def profile(request):
-    files = File.objects.filter(owner=request.user)
-    # users = User.objects.exclude(id=request.user.id)  # Get all users except the current user
+    # Get files uploaded by the current user
+    user_files = File.objects.filter(owner=request.user)
+ # Get files shared with the current user
+    shared_files = SharedFile.objects.filter(user=request.user).values('file')
+
+    # Filter the File model to get shared files
+    files = File.objects.filter(Q(owner=request.user) | Q(id__in=shared_files))
+
     context = {
         'files': files,
-        # 'users': users,  # Add the list of users to the context
     }
+
     return render(request, "profile.html", context)
 
 # TODO: Here you will be able to upload a file for that user
@@ -110,9 +120,8 @@ def profile(request):
 def upload_file(request):
     if request.method == "POST":
         form = UploadFileForm(request.POST, request.FILES)
-        # Handle checking file integrity here and create file object to save after checking
+        #TODO: Handle checking file integrity here and create file object to save after checking
         if form.is_valid():
-            # TODO: check file integrity here
             # TODO: need to make inputs correct for creating file object
             # file_instance = File(file=request.FILES["file"])
             # file_instance.save()
@@ -124,22 +133,48 @@ def upload_file(request):
 @login_required
 def share_file(request, file_id):
     # Get the file object using the file_id
-    file = get_object_or_404(File, id=file_id)  # Fetch the file object
-    users = User.objects.exclude(id=request.user.id)  # Fetch the list of users excluding the current user
+    file_to_share = get_object_or_404(File, id=file_id)
 
     # Check if the file's owner is the current user
-    if file.owner != request.user:
+    if file_to_share.owner != request.user:
         messages.error(request, "You can only share your own files.")
         return redirect('file_app:profile')
+    
 
     if request.method == 'POST':
-        # Retrieve the selected user's ID from the form
-        selected_user_id = request.POST.get('shared_user')
-        # user_to_share = User.objects.filter(id=selected_user_id).first()
-        #TODO: MORE STUFF TO ADD
+        form = ShareFileForm(request, request.POST)
+        if form.is_valid():
+            user_to_share = form.cleaned_data['shared_user']
+            permission = form.cleaned_data['permission']
+            user_to_share = form.cleaned_data['shared_user']
+            permission = form.cleaned_data['permission']
+            
+            # Check if the file's owner is the current user
+            if file_to_share.owner != request.user:
+                messages.error(request, "You can only share your own files.")
+                return redirect('file_app:profile')
+
+             # Check if a shared file entry with the same user and file already exists
+            shared_file, created = SharedFile.objects.get_or_create(
+                user=user_to_share,
+                file=file_to_share,
+                defaults={'permission': permission, 'file_name': file_to_share.file_name}
+            )
+
+            if not created:
+                # Update the existing entry with a new permission
+                shared_file.permission = permission
+                shared_file.save()
+                
+            messages.success(request, f"File '{file_to_share.file_name}' has been shared with {user_to_share.username}.")
+    else:
+        form = ShareFileForm(request)
+    # In the template, we should list users and provide a way to select a user to share the file with
+    users = User.objects.exclude(id=request.user.id)
     context = {
-        'file': file,
+        'file': file_to_share,
         'users': users,
+        'form': form,
     }
 
     return render(request, 'share_file.html', context)
