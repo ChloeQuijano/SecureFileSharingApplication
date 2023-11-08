@@ -96,7 +96,7 @@ def login(request):
 def sign_out(request):
     logout(request)
     messages.success(request, f'You have been logged out.')
-    return render(request, "login.html")
+    return redirect(reverse('file_app:login'))
 
 # Can view the files for the user
 @login_required

@@ -1,42 +1,48 @@
 <!DOCTYPE html>
 {% extends './base.html' %}
 
-{%block title%}
+{% block title %}
 Profile
-{%endblock title%}
+{% endblock title %}
 
-{%block contents%}
+{% block contents %}
 
-{%csrf_token%}
-<div>
-    {%if request.user.is_authenticated %}
-  			<h1>{{ request.user.username | title }}'s Files</h1>
-           <div class="row">
-            <div class="col-md-6 offset-md-3">
+{% csrf_token %}
+<div class="container">
+    {% if request.user.is_authenticated %}
+        <h1 class="text-center mt-4">{{ request.user.username | title }}'s Files</h1>
+        <div class="row justify-content-center mt-4">
+            <div class="col-md-8">
                 <ul class="list-group">
-
-     {% for file in files %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-
-                        {%if file.owner == request.user %}
-                            <span> My File</span>
-                        {% else %}
-                            <span>Shared file</span>
-                        {% endif %}
-                            <span>{{ file.file_name }}</span>
-                            <span class="badge bg-secondary rounded-pill">{{ file.file_size }} MB</span>
-                            <!-- TODO: Add button for sharing the file with a dropdown list of users to share to-->
-                            <!-- chloe: it might be more secure to let this only be a text box search? -->
-                              {%if file.owner == request.user %}
-                            <a href="{% url 'file_app:share_file' file.id %}" class="btn btn-primary">Share</a>
-                        {% endif %}
+                    {% if files is None %}
+                        <li class="list-group-item text-center">First time here! Upload and share!</li>
+                        <li class="list-group-item text-center">
+                            <a href="{% url 'file_app:upload' %}" class="btn btn-primary">Upload</a>
                         </li>
-                    {% endfor %}
+                    {% else %}
+                        {% for file in files %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                {% if file.owner == request.user %}
+                                    <span class="text-success">My File</span>
+                                {% else %}
+                                    <span class="text-primary">Shared file</span>
+                                {% endif %}
+                                <span>{{ file.file_name }}</span>
+                                <span class="badge bg-secondary rounded-pill">{{ file.file_size }} MB</span>
+                                {% if file.owner == request.user %}
+                                    <a href="{% url 'file_app:share_file' file.id %}" class="btn btn-primary">Share</a>
+                                {% endif %}
+{#                             TODO: DOWNLOAD FUNCTION#}
+                            <a href="#" class="btn btn-primary">Download</a>
+                            </li>
+                        {% endfor %}
+                    {% endif %}
                 </ul>
             </div>
-  	{%else%}
-            <h3> You are not logged in </h3>
-  	{%endif%}
-</div>            
+        </div>
+    {% else %}
+        <h3 class="text-center mt-4">You are not logged in</h3>
+    {% endif %}
+</div>
 
-{%endblock contents%}
+{% endblock contents %}
