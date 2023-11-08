@@ -6,7 +6,11 @@ Upload File
 {%endblock title%}
 
 {%block contents%}
-
+{%if error%}
+<div class="alert alert-danger" role="alert">
+    {{error}}
+</div>
+{%endif%}
 <div>
     <h3>Upload a file below</h3>
     <form method ='post' enctype ="multipart/form-data">

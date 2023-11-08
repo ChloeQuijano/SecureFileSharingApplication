@@ -1,25 +1,17 @@
 import magic
 
-from django.utils.deconstruct import deconstructible
 from django.template.defaultfilters import filesizeformat
 from django.core.exceptions import ValidationError
 
 # max bytes for file type
 MAX_SIZE = 3 * (1024 * 1024)   # 3MB
 
-@deconstructible
 class FileValidation(object):
     """
     File type and size validator, used in file model.
     """
-    max_size_message = (
-        "Ensure this file size is not greater than %(max_size)s."
-        "Your file size is %(size)s."
-    )
-    file_type_message = (
-        "Files of type %(file_type)s are not supported.",
-        "Allowed extensions are: '%(file_types)s'."
-    )
+    max_size_message = "Ensure this file size is not greater than %(max_size)s. Your file size is %(size)s."
+    file_type_message = "Files of type %(file_type)s are not supported. Allowed extensions are: '%(file_types)s'."
 
     def __init__(self, max_size=MAX_SIZE,file_types=()):
         self.max_size = max_size
@@ -40,5 +32,7 @@ class FileValidation(object):
             fileObj.seek(0)
 
             if file_type not in self.file_types:
-                params = {'file_type': file_type }
+                params = {'file_type': file_type, 'file_types': self.file_types }
                 raise ValidationError(self.file_type_message, 'file_type', params)
+        
+        return fileObj

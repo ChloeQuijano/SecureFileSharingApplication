@@ -11,6 +11,7 @@ from django.contrib.auth.models import User
 from django.db.models import Q
 from django.core.exceptions import PermissionDenied
 from .forms import ShareFileForm
+from django.core.exceptions import ValidationError
 
 
 from .userauth import *
@@ -122,10 +123,20 @@ def upload_file(request):
         form = UploadFileForm(request.POST, request.FILES)
         # Handle checking file integrity here and create file object to save after checking
         if form.is_valid():
-            file_instance = File(file=request.FILES["file"])
-            file_instance.save()
-            messages.success(request, f'File is successfully uploaded.')
-            return redirect(reverse('file_app:profile')) # go back to profile page to see all the files
+            try:
+                # Check if a shared file entry with the same user and file already exists
+                file_instance = File.objects.create(
+                    owner=request.user,
+                    file=form.cleaned_data['file'],
+                    file_name=form.cleaned_data['title'],
+                    file_size=form.cleaned_data['file'].size
+                )
+                #file_instance = File(file=request.FILES["file"])
+                file_instance.save()
+                messages.success(request, f'File is successfully uploaded.')
+                return redirect(reverse('file_app:profile')) # go back to profile page to see all the files
+            except ValidationError as e:
+                messages.error(request, e.message)
     else:
         form = UploadFileForm()
     return render(request, "upload_file.html", {"form": form})
