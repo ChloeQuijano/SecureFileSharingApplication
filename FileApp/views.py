@@ -121,7 +121,7 @@ def profile(request):
 @login_required
 @csrf_protect
 def upload_file(request):
-    # FIXME : ACCEPT 3MB OR LESS
+    # FIXME :DO NOT ACCEPT MORE THAN 3MB
     if request.method == "POST":
         form = UploadFileForm(request.POST, request.FILES)
         # Handle checking file integrity here and create file object to save after checking

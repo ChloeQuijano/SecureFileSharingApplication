@@ -33,11 +33,9 @@ Profile
                                     <a href="{% url 'file_app:share_file' file.id %}" class="btn btn-primary">Share</a>
                                 {% endif %}
 {#                             TODO: DOWNLOAD FUNCTION#}
-<<<<<<< HEAD
-                            <a href="#" class="btn btn-primary">Download</a>
-=======
+
                             <a href="{% url 'file_app:download_file' file.id %}" class="btn btn-primary">Download</a>
->>>>>>> e975cc0 (added todo's and fix-me's)
+
                             </li>
                         {% endfor %}
                     {% endif %}
