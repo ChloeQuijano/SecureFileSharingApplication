@@ -147,3 +147,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # will redirect user to login if not logged in
 LOGIN_URL = 'login'
+
+# Encryption key for Fernet, needs to be generated for personal
+ENCRYPTION_KEY = config("ENCRYPTION_KEY")
