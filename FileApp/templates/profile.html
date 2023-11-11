@@ -20,24 +20,23 @@ Profile
                             <a href="{% url 'file_app:upload' %}" class="btn btn-primary">Upload</a>
                         </li>
                     {% else %}
-                        {% for file in files %}
+                        {% for file_info in files %}
                             <li class="list-group-item d-flex justify-content-between align-items-center">
-                                {% if file.owner == request.user %}
+                                {% if file_info.file.owner == request.user %}
                                     <span class="text-success">My File</span>
                                 {% else %}
                                     <span class="text-primary">Shared file</span>
                                 {% endif %}
-                                <span>{{ file.file_name }}</span>
-                                <span class="badge bg-secondary rounded-pill">{{ file.file_size }} MB</span>
-                                {% if file.owner == request.user %}
-                                    <a href="{% url 'file_app:share_file' file.id %}" class="btn btn-primary">Share</a>
-                                {% endif %}
+                                <span>{{ file_info.file.file_name }}</span>
+                                <span class="badge bg-secondary rounded-pill">{{ file_info.file.get_file_size_mb }} BYTES</span>
+                            {% if file_info.file.owner == request.user  %}
+                                 <a href="{% url 'file_app:share_file' file_info.file.id %}" class="btn btn-primary">Share</a>
+                            {% endif %}
+                                {% if file_info.has_permission%}
 {#                             TODO: DOWNLOAD FUNCTION#}
-<<<<<<< HEAD
-                            <a href="#" class="btn btn-primary">Download</a>
-=======
-                            <a href="{% url 'file_app:download_file' file.id %}" class="btn btn-primary">Download</a>
->>>>>>> e975cc0 (added todo's and fix-me's)
+                                    <a href="{% url 'file_app:download_file' file_info.file.id %}" class="btn btn-primary">Download</a>
+                                {% endif %}
+
                             </li>
                         {% endfor %}
                     {% endif %}

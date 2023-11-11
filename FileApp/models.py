@@ -17,7 +17,7 @@ class File(models.Model):
 
     def get_file_size_mb(self):
         # Convert file size to megabytes
-        return round(self.file_size / (1024 * 1024), 2)
+        return round(self.file_size, 5)
     def __str__(self):
         return self.file_name
 

@@ -7,3 +7,5 @@ __pycache__/
 .idea/
 # .github/
 FileApp/migrations/
+uploads/*.txt
+

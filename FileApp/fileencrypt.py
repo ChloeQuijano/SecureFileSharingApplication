@@ -1,7 +1,8 @@
 from cryptography.fernet import Fernet
 from django.conf import settings
 from django.core.files.base import ContentFile
-
+from .models import File, SharedFile
+import hashlib
 
 class FileEncryptor():
     """
@@ -38,17 +39,43 @@ class FileEncryptor():
         f = Fernet(settings.ENCRYPTION_KEY.encode("utf-8"))
 
         # open the encrypted file
-        encrypted = encrypted_file.read()
+        encrypted = encrypted_file.file.read()
 
         # decrypt the data
         decrypted = f.decrypt(encrypted)
 
-        # rewrite the data in file to decrypted data
-        decrypted_file = ContentFile(decrypted)
+        if isinstance(encrypted_file, File):
+        # create new File instance of decrypted data
+            decrypted_instance = File()
+            decrypted_instance.owner = encrypted_file.owner
+            decrypted_instance.file_name = encrypted_file.file_name
+            decrypted_instance.file_size = encrypted_file.file_size
+            decrypted_instance.file_type = encrypted_file.file_type
 
-        # Set the name and content of the file field
-        decrypted_file.name = encrypted_file.name
-        encrypted_file.save(encrypted_file.name, decrypted_file)
+            decrypted_instance.file = ContentFile(decrypted, name=encrypted_file.file_name)
 
-        # Return the modified File object
-        return encrypted_file
+        elif isinstance(encrypted_file, SharedFile):
+        # create new SharedFile instance of decrypted data
+            decrypted_instance = SharedFile()
+            decrypted_instance.user = encrypted_file.user
+            decrypted_instance.file_name = encrypted_file.file_name
+            decrypted_instance.permission = encrypted_file.permission
+
+            decrypted_instance.file = ContentFile(decrypted, name=encrypted_file.file_name)
+
+        else:
+            raise ValueError("Unsupported file type")
+
+        return decrypted_instance
+
+
+# Calculate hash file content
+def file_hashing(file_content):
+        hash_obj = hashlib.sha256(file_content)
+        return hash_obj
+
+
+
+
+
+
