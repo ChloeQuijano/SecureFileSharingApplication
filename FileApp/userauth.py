@@ -1,6 +1,7 @@
 import re
 import bcrypt
 
+
 class Validation:
     @staticmethod
     def email_valid(email):
@@ -8,10 +9,16 @@ class Validation:
         return re.match(pattern, email, re.I)
 
     @staticmethod
-    # at least one upper case, lower case and digit and one special char in "!@#$&/"
+    # At least one upper case, lower case and digit and one special char in "!@#$&/"
     def strong_password(password):
-        pattern =r"^(?=.*[A-Z])(?=.*[a-z])(?=.*[!@#$&/*])(?=.*\d).{6,}$"
+        pattern = r"^(?=.*[A-Z])(?=.*[a-z])(?=.*[!@#$&/*])(?=.*\d).{6,}$"
         return re.match(pattern, password)
+
+    @staticmethod
+    def username_valid(name):
+        name = name.strip()
+        return re.match(r"^[a-zA-Z0-9_]+$", name) and (4 <= len(name) <= 30)
+
 
 class UserRegistration:
     def __init__(self, username, email, password, password2):
@@ -34,4 +41,5 @@ class UserRegistration:
     def are_passwords_matching(self):
         return self.password == self.password2
 
-
+    def is_username_valid(self):
+        return Validation.username_valid(self.username)
