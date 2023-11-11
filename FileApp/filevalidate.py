@@ -1,5 +1,5 @@
 import magic
-
+from .models import SharedFile
 from django.template.defaultfilters import filesizeformat
 from django.core.exceptions import ValidationError
 
@@ -36,3 +36,14 @@ class FileValidation(object):
                 raise ValidationError(self.file_type_message, 'file_type', params)
         
         return fileObj
+
+
+
+def has_permission(file, user):
+    # Check if the user is the owner of the file
+    if file.owner == user:
+        return True
+
+    # Check if the file is shared with the user and has 'edit' permission
+    shared_file = SharedFile.objects.filter(file=file, user=user, permission='edit').first()
+    return shared_file is not None

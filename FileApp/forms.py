@@ -18,8 +18,15 @@ class LoginForm(forms.Form):
     password = forms.CharField(max_length=65, widget=forms.PasswordInput) 
 
 class ShareFileForm(forms.Form):
+    def __init__(self, request, *args, **kwargs):
+        super(ShareFileForm, self).__init__(*args, **kwargs)
+        self.request = request  # Set the request attribute
+
+        # Exclude current user
+        self.fields['shared_user'].queryset = User.objects.exclude(id = request.user.id)
+
     shared_user = forms.ModelChoiceField(
-        queryset=User.objects.all(),
+        queryset=User.objects.none(),
         empty_label="Select user to share with",
     )
     permission = forms.ChoiceField(
@@ -31,16 +38,7 @@ class ShareFileForm(forms.Form):
         widget=forms.RadioSelect,
     )
 
-    def __init__(self, request, *args, **kwargs):
-        super(ShareFileForm, self).__init__(*args, **kwargs)
-        self.request = request  # Set the request attribute
 
-    def clean(self):
-        cleaned_data = super().clean()
-        shared_user = cleaned_data.get('shared_user')
-        permission = cleaned_data.get('permission')
 
-        if shared_user and shared_user == self.request.user:
-            raise forms.ValidationError("You cannot share a file with yourself.")
 
-        return cleaned_data
+

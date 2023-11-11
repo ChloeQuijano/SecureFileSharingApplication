@@ -2,21 +2,27 @@ from django.shortcuts import render, redirect, reverse, get_object_or_404
 from django.http import HttpResponse
 from django.contrib import messages
 from django.contrib.auth.models import User
-from django.contrib.auth import login as auth_login, authenticate, logout
+from django.contrib.auth import login as server_login, authenticate, logout
 from django.views.decorators.csrf import csrf_protect, csrf_exempt
 from django.contrib.auth.decorators import login_required
-
-from FileApp.fileencrypt import FileEncryptor
-from .forms import UploadFileForm, LoginForm, RegisterForm
-from .models import File, SharedFile, FileIntegrity
 from django.contrib.auth.models import User
 from django.db.models import Q
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied,ValidationError
+import hashlib
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+# ------------------------------------------------------------------#
+from FileApp.fileencrypt import *
+from .forms import UploadFileForm, LoginForm, RegisterForm
+from .models import File, SharedFile, FileIntegrity
 from .forms import ShareFileForm
-from django.core.exceptions import ValidationError
-
-
 from .userauth import *
+from .filevalidate import has_permission
+
 
 # Home page where navigation bar contains sign up / login links
 def home(request):
@@ -47,11 +53,12 @@ def register(request):
                 if not reg.are_passwords_matching():
                     messages.error("Passwords are not matching")
                     return render(request, "register.html", {"form": form})
-                elif reg.is_email_valid() and reg.is_password_strong()  and reg.are_passwords_matching():
+                elif reg.is_email_valid() and reg.is_password_strong() and reg.are_passwords_matching():
                     hashed = reg.hash_password()
                     user = User(username=username, email=email, password=hashed.decode('utf-8'))
                     user.save()
                     messages.success(request,"Successful registration" )
+                    server_login(request, user)
                     return redirect(reverse('file_app:home'))
 
             except Exception as e:
@@ -64,7 +71,7 @@ def register(request):
 
 # Login page for user
 @csrf_protect
-def login(request):
+def client_login(request):
     form = LoginForm()
 
     if request.method == "POST":
@@ -81,7 +88,7 @@ def login(request):
 
             if user is not None:
                 if bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8')):
-                    auth_login(request, user)
+                    server_login(request, user)
                     messages.success(request, f"Hi {user.username.title()}, welcome back!")
                     return redirect(reverse('file_app:home'))  # Redirect to a secured page after successful login
                 else:
@@ -95,24 +102,30 @@ def login(request):
 
 # Logout page for user
 @csrf_protect
+@login_required
 def sign_out(request):
     logout(request)
     messages.success(request, f'You have been logged out.')
     return redirect(reverse('file_app:login'))
 
 # Can view the files for the user
+
 @login_required
 def profile(request):
     # Get files uploaded by the current user
     user_files = File.objects.filter(owner=request.user)
- # Get files shared with the current user
+
+    # Get files shared with the current user
     shared_files = SharedFile.objects.filter(user=request.user).values('file')
 
     # Filter the File model to get shared files
     files = File.objects.filter(Q(owner=request.user) | Q(id__in=shared_files))
 
+    #Zip the permission with the file  -- Anne
+    files_with_permission = [{'file': file, 'has_permission': has_permission(file, request.user)} for file in files]
+
     context = {
-        'files': files,
+        'files': files_with_permission,
     }
 
     return render(request, "profile.html", context)
@@ -121,7 +134,7 @@ def profile(request):
 @login_required
 @csrf_protect
 def upload_file(request):
-    # FIXME :DO NOT ACCEPT MORE THAN 3MB
+
     if request.method == "POST":
         form = UploadFileForm(request.POST, request.FILES)
         # Handle checking file integrity here and create file object to save after checking
@@ -131,6 +144,11 @@ def upload_file(request):
                 encryptor=FileEncryptor()
                 encryptor.file_encrypt(form.cleaned_data['file'])
 
+                file_content = form.cleaned_data['file'].read()
+
+                # Calculate hash digest of file before saving
+                hash_bfr_save = file_hashing(file_content).hexdigest()
+
                 # Creates a new file and validates its content
                 file_instance = File.objects.create(
                     owner=request.user,
@@ -138,10 +156,24 @@ def upload_file(request):
                     file_name=form.cleaned_data['title'],
                     file_size=form.cleaned_data['file'].size
                 )
+
                 # Saves the file object to database
                 file_instance.save()
-                messages.success(request, f'File is successfully uploaded.')
-                return redirect(reverse('file_app:profile')) # go back to profile page to see all the files
+
+                # Calculate hash digest of file after saving
+                hash_after_save =  file_hashing(file_content).hexdigest()
+
+                logger.debug(f'Hash before save: {hash_bfr_save}')
+                logger.debug(f'Hash after save: {hash_after_save}')
+
+                if hash_after_save == hash_bfr_save:
+                    messages.success(request, f'File is successfully uploaded.')
+                    return redirect(reverse('file_app:profile')) # go back to profile page to see all the files
+                else:
+                    # Delete corrupted file
+                    file_instance.delete()
+                    messages.error(request, "File integrity compromised during upload, try again")
+
             except ValidationError as e:
                 messages.error(request, e.message)
     else:
@@ -149,7 +181,9 @@ def upload_file(request):
     return render(request, "upload_file.html", {"form": form})
 
 @login_required
+@csrf_protect
 def share_file(request, file_id):
+
     # Get the file object using the file_id
     file_to_share = get_object_or_404(File, id=file_id)
 
@@ -164,14 +198,6 @@ def share_file(request, file_id):
         if form.is_valid():
             user_to_share = form.cleaned_data['shared_user']
             permission = form.cleaned_data['permission']
-            user_to_share = form.cleaned_data['shared_user']
-            permission = form.cleaned_data['permission']
-            
-            # Check if the file's owner is the current user
-            #NO NEED, REMOVED SHARED BUTTON FOR NON OWNERS
-            # if file_to_share.owner != request.user:
-            #     messages.error(request, "You can only share your own files.")
-            #     return redirect('file_app:profile')
 
              # Check if a shared file entry with the same user and file already exists
             shared_file, created = SharedFile.objects.get_or_create(
@@ -184,8 +210,11 @@ def share_file(request, file_id):
                 # Update the existing entry with a new permission
                 shared_file.permission = permission
                 shared_file.save()
-                
-            messages.success(request, f"File '{file_to_share.file_name}' has been shared with {user_to_share.username}.")
+                messages.success(request,f"File '{file_to_share.file_name}' has successfully been updated for {user_to_share.username}.")
+            else:
+                # Add comment to user - Anne
+                messages.success(request,f"File '{file_to_share.file_name}' has successfully been shared with {user_to_share.username}.")
+
     else:
         form = ShareFileForm(request)
     # In the template, we should list users and provide a way to select a user to share the file with
@@ -198,7 +227,54 @@ def share_file(request, file_id):
 
     return render(request, 'share_file.html', context)
 
-
-# TODO: download file
+@login_required()
 def download_file(request, file_id):
-    return HttpResponse('TODO')
+    try:
+        file = get_object_or_404(File, id=file_id)
+        encryptor = FileEncryptor()
+        decrypted_file = encryptor.file_decrypt(file)
+        decrypted_content = decrypted_file.file.read()
+
+        # Calculate the hash digest of file before download
+        hash_bfr_download = hashlib.sha256(decrypted_content).hexdigest()
+
+        response = HttpResponse(decrypted_content, content_type='application/force-download')
+        response['Content-Disposition'] = f'attachment; filename="{decrypted_file.file_name}"'
+
+        # Calculate the hash digest of file after download
+        hash_after_download= hashlib.sha256(response.content).hexdigest()
+
+        # Log hash values for debugging -- TODO: Remove when we submit
+        logger.debug(f'Hash before download: {hash_bfr_download}')
+        logger.debug(f'Hash after download: {hash_after_download}')
+
+        # No two diff input even with the slightest change have the same hash digest unless modified
+        if hash_bfr_download == hash_after_download:
+             return response
+        else:
+            messages.error(request, "File integrity has been comprised, can not download this file")
+            return redirect('file_app:profile')
+
+    except File.DoesNotExist:
+        try:
+            shared_file = get_object_or_404(SharedFile, id=file_id)
+
+            # if you can edit a share file then you can download , edit then reuploaded
+            if shared_file.permission == 'edit':
+                response = HttpResponse(shared_file.file.read(), content_type='application/force-download')
+                response['Content-Disposition'] = f'attachment; filename="{shared_file.file_name}"'
+
+                return response
+
+            # no need   -- Remove when done
+            elif shared_file.permission == 'read':
+                messages.error(request, "No valid access")
+                return redirect('file_app:profile')
+
+        except SharedFile.DoesNotExist:
+            messages.error(request, "No file with that id")
+            return redirect('file_app:profile')
+
+    except ValidationError as e:
+        messages.error(request, f"File could not be decrypted: {str(e)}")
+        return redirect('file_app:profile')
