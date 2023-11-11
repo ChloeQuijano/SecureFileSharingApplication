@@ -34,6 +34,7 @@ def register(request):
     if request.method == "POST":
         form = RegisterForm(request.POST)
         if form.is_valid():
+            # Sanitize input
             username = form.cleaned_data["username"]
             email = form.cleaned_data["email"]
             password = form.cleaned_data["password1"]
@@ -50,19 +51,23 @@ def register(request):
                 if not reg.is_password_strong():
                     messages.error(request, "Password is not strong enough ")
                     return render(request, "register.html", {"form": form})
+                if not reg.is_email_valid():
+                    messages.error(request, "Username is not valid, must be alphanumeric and underscores ")
+                    return render(request, "register.html", {"form": form})
                 if not reg.are_passwords_matching():
                     messages.error("Passwords are not matching")
                     return render(request, "register.html", {"form": form})
-                elif reg.is_email_valid() and reg.is_password_strong() and reg.are_passwords_matching():
+                elif reg.is_email_valid() and reg.is_password_strong() and reg.are_passwords_matching() and reg.are_passwords_matching():
                     hashed = reg.hash_password()
                     user = User(username=username, email=email, password=hashed.decode('utf-8'))
                     user.save()
+
                     messages.success(request,"Successful registration" )
                     server_login(request, user)
                     return redirect(reverse('file_app:home'))
 
             except Exception as e:
-                    messages.error(request, str(e))
+                messages.error(request, str(e))
         else:
             messages.error(request, "Form is invalid. Please check your input.")
     else:
@@ -78,6 +83,7 @@ def client_login(request):
         form = LoginForm(request.POST)
 
         if form.is_valid():
+            # Sanitize input
             username = form.cleaned_data["username"]
             password = form.cleaned_data["password"]
 
@@ -121,7 +127,7 @@ def profile(request):
     # Filter the File model to get shared files
     files = File.objects.filter(Q(owner=request.user) | Q(id__in=shared_files))
 
-    #Zip the permission with the file  -- Anne
+    # Zip the permission with the file  -- Anne
     files_with_permission = [{'file': file, 'has_permission': has_permission(file, request.user)} for file in files]
 
     context = {
@@ -161,7 +167,7 @@ def upload_file(request):
                 file_instance.save()
 
                 # Calculate hash digest of file after saving
-                hash_after_save =  file_hashing(file_content).hexdigest()
+                hash_after_save = file_hashing(file_content).hexdigest()
 
                 logger.debug(f'Hash before save: {hash_bfr_save}')
                 logger.debug(f'Hash after save: {hash_after_save}')
@@ -183,6 +189,7 @@ def upload_file(request):
 @login_required
 @csrf_protect
 def share_file(request, file_id):
+    # TODO : Sanitize user input, anytime there's an input sanitize it
 
     # Get the file object using the file_id
     file_to_share = get_object_or_404(File, id=file_id)
@@ -191,7 +198,6 @@ def share_file(request, file_id):
     if file_to_share.owner != request.user:
         messages.error(request, "You can only share your own files.")
         return redirect('file_app:profile')
-    
 
     if request.method == 'POST':
         form = ShareFileForm(request, request.POST)
@@ -199,7 +205,7 @@ def share_file(request, file_id):
             user_to_share = form.cleaned_data['shared_user']
             permission = form.cleaned_data['permission']
 
-             # Check if a shared file entry with the same user and file already exists
+            # Check if a shared file entry with the same user and file already exists
             shared_file, created = SharedFile.objects.get_or_create(
                 user=user_to_share,
                 file=file_to_share,
@@ -250,7 +256,7 @@ def download_file(request, file_id):
 
         # No two diff input even with the slightest change have the same hash digest unless modified
         if hash_bfr_download == hash_after_download:
-             return response
+            return response
         else:
             messages.error(request, "File integrity has been comprised, can not download this file")
             return redirect('file_app:profile')
