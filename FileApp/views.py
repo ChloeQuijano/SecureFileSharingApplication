@@ -140,7 +140,8 @@ def profile(request):
 @login_required
 @csrf_protect
 def upload_file(request):
-
+    # TODO : Sanitize user input, anytime there's an input sanitize it
+     
     if request.method == "POST":
         form = UploadFileForm(request.POST, request.FILES)
         # Handle checking file integrity here and create file object to save after checking
@@ -189,7 +190,6 @@ def upload_file(request):
 @login_required
 @csrf_protect
 def share_file(request, file_id):
-    # TODO : Sanitize user input, anytime there's an input sanitize it
 
     # Get the file object using the file_id
     file_to_share = get_object_or_404(File, id=file_id)
