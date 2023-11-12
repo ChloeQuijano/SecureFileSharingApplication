@@ -3,6 +3,9 @@ import bcrypt
 
 
 class Validation:
+    """
+    Class for validating inputs for user registration
+    """
     @staticmethod
     def email_valid(email):
         pattern = r"^[A-Z0-9+_.-]+@[A-Z0-9.-]+$"
@@ -10,6 +13,7 @@ class Validation:
 
     @staticmethod
     # At least one upper case, lower case and digit and one special char in "!@#$&/"
+    # FIXME: needs to also check if it is similar to the other personal information being entered
     def strong_password(password):
         pattern = r"^(?=.*[A-Z])(?=.*[a-z])(?=.*[!@#$&/*])(?=.*\d).{6,}$"
         return re.match(pattern, password)
@@ -21,6 +25,9 @@ class Validation:
 
 
 class UserRegistration:
+    """
+    Class for checking user registration information
+    """
     def __init__(self, username, email, password, password2):
         self.username = username
         self.email = email
