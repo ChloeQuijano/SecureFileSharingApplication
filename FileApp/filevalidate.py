@@ -10,7 +10,7 @@ class FileValidation(object):
     """
     File type and size validator, used in file model.
     """
-    max_size_message = "Ensure this file size is not greater than %(max_size)s. Your file size is %(size)s."
+    max_size_message = "Ensure this file size is not greater than %(max_size)s bytes. Your file size is %(size)s bytes."
     file_type_message = "Files of type %(file_type)s are not supported. Allowed extensions are: '%(file_types)s'."
 
     def __init__(self, max_size=MAX_SIZE,file_types=()):
@@ -40,7 +40,9 @@ class FileValidation(object):
 
 
 def has_permission(file, user):
-    # Check if the user is the owner of the file
+    """
+    Check if the user is the owner of the file
+    """
     if file.owner == user:
         return True
 

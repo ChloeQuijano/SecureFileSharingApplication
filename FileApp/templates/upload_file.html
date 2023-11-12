@@ -13,6 +13,7 @@ Upload File
 {%endif%}
 <div>
     <h3>Upload a file below</h3>
+    <p>Accepted file types are text/plain</p>
     <form method ='post' enctype ="multipart/form-data">
         {% csrf_token %}
         {{form.as_p}}

@@ -5,19 +5,31 @@ from django.contrib.auth.forms import UserCreationForm
 from FileApp.filevalidate import FileValidation
 
 class UploadFileForm(forms.Form):
+    """
+    Form for uploading file
+    """
     title = forms.CharField(max_length=255)
     file = forms.FileField(validators=[FileValidation(file_types=('text/plain',))])
 
 class RegisterForm(UserCreationForm):
+    """
+    Form for user registration
+    """
     class Meta:
         model=User
         fields = ['username','email','password1','password2']
 
 class LoginForm(forms.Form):
+    """
+    Form for user login
+    """
     username = forms.CharField(max_length=65)
     password = forms.CharField(max_length=65, widget=forms.PasswordInput) 
 
 class ShareFileForm(forms.Form):
+    """
+    Form for file sharing
+    """
     def __init__(self, request, *args, **kwargs):
         super(ShareFileForm, self).__init__(*args, **kwargs)
         self.request = request  # Set the request attribute
@@ -31,8 +43,8 @@ class ShareFileForm(forms.Form):
     )
     permission = forms.ChoiceField(
         choices=(
-            ('read', 'Read'),
-            ('edit', 'Edit'),
+            ('read', 'Read'), # can download, not able to share file
+            ('edit', 'Edit'), # can both download and share file
         ),
         initial='read',
         widget=forms.RadioSelect,

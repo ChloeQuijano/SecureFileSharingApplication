@@ -38,6 +38,6 @@ Other Instructions:
 
 ## Running tests
 
-Files for test cases are in tests folder
+Files for test cases are in tests.py file
 
 `py manage.py test`

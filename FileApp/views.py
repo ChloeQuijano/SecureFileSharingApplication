@@ -24,13 +24,17 @@ from .userauth import *
 from .filevalidate import has_permission
 
 
-# Home page where navigation bar contains sign up / login links
 def home(request):
+    """
+    Home page where navigation bar contains sign up / login links
+    """
     return render(request, "home.html")
 
-# Register a new user account page
 @csrf_protect
 def register(request):
+    """
+    Register a new user account page
+    """
     if request.method == "POST":
         form = RegisterForm(request.POST)
         if form.is_valid():
@@ -74,9 +78,11 @@ def register(request):
             form = RegisterForm()
     return render(request, "register.html", {'form': form})
 
-# Login page for user
 @csrf_protect
 def client_login(request):
+    """
+    Login page for user
+    """
     form = LoginForm()
 
     if request.method == "POST":
@@ -96,7 +102,7 @@ def client_login(request):
                 if bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8')):
                     server_login(request, user)
                     messages.success(request, f"Hi {user.username.title()}, welcome back!")
-                    return redirect(reverse('file_app:home'))  # Redirect to a secured page after successful login
+                    return redirect(reverse('file_app:profile'))  # Redirect to the user's file page
                 else:
                     messages.error(request, "Invalid username or password")
             else:
@@ -105,20 +111,23 @@ def client_login(request):
     # Handle GET request or form errors
     return render(request, "login.html", {"form": form})
 
-
-# Logout page for user
 @csrf_protect
 @login_required
 def sign_out(request):
+    """
+    Sign out page where user is logged out. Redirects logout user to login page
+    """
     logout(request)
     messages.success(request, f'You have been logged out.')
     return redirect(reverse('file_app:login'))
 
-# Can view the files for the user
-
 @login_required
 def profile(request):
+    """
+    Profile page where all files are listed. Login required to access page
+    """
     # Get files uploaded by the current user
+    # FIXME: not used, should we delete?
     user_files = File.objects.filter(owner=request.user)
 
     # Get files shared with the current user
@@ -136,12 +145,12 @@ def profile(request):
 
     return render(request, "profile.html", context)
 
-# Here you will be able to upload a file for that user
 @login_required
 @csrf_protect
 def upload_file(request):
-    # TODO : Sanitize user input, anytime there's an input sanitize it
-     
+    """
+    Upload file form and page. Login required to access page
+    """
     if request.method == "POST":
         form = UploadFileForm(request.POST, request.FILES)
         # Handle checking file integrity here and create file object to save after checking
@@ -190,6 +199,10 @@ def upload_file(request):
 @login_required
 @csrf_protect
 def share_file(request, file_id):
+    """
+    Share file form and page. Login required to access page
+    TODO: Sanitize user input, anytime there's an input sanitize it
+    """
 
     # Get the file object using the file_id
     file_to_share = get_object_or_404(File, id=file_id)
@@ -233,9 +246,14 @@ def share_file(request, file_id):
 
     return render(request, 'share_file.html', context)
 
-@login_required()
+@login_required
 def download_file(request, file_id):
+    """
+    Download the file for the user. Login required to access function
+    FIXME: Downloaded file needs to be textfile type
+    """
     try:
+        # decrypts the file from the database
         file = get_object_or_404(File, id=file_id)
         encryptor = FileEncryptor()
         decrypted_file = encryptor.file_decrypt(file)

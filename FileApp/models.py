@@ -1,10 +1,10 @@
 from django.db import models
 from django.contrib.auth.models import User  # For user authentication
 
-# Create your models here.
-
-# for storing file data
 class File(models.Model):
+    """
+    Class for storing file data
+    """
     owner = models.ForeignKey(User, on_delete=models.CASCADE)  # The user who uploaded the file
     file_name = models.CharField(max_length=255)
     file = models.FileField(upload_to='uploads')
@@ -15,20 +15,29 @@ class File(models.Model):
     file_size = models.PositiveIntegerField()  # File size in bytes
     file_type = models.CharField(max_length=100)  # Type of the file (e.g., text file)
 
-    def get_file_size_mb(self):
-        # Convert file size to megabytes
-        return round(self.file_size, 5)
+    def get_file_size_kb(self):
+        """
+        Convert file size in bytes to KB
+        FIXME: can improve to be dynamic with MB or KB
+        """
+        return round(self.file_size / (1024), 2)
+    
     def __str__(self):
         return self.file_name
 
-# for storing file intrigity data
 class FileIntegrity(models.Model):
+    """
+    Class for storing file integrity data
+    """
     file = models.ForeignKey(File, on_delete=models.CASCADE)
     sha256_hash = models.CharField(max_length=64)
     def __str__(self):
         return self.file.file_name
 
 class SharedFile(models.Model):
+    """
+    Class for shared file data
+    """
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     file = models.ForeignKey(File, on_delete=models.CASCADE)
     access_date = models.DateTimeField(auto_now=True) # optional

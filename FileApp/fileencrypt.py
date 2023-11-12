@@ -69,13 +69,9 @@ class FileEncryptor():
         return decrypted_instance
 
 
-# Calculate hash file content
 def file_hashing(file_content):
-        hash_obj = hashlib.sha256(file_content)
-        return hash_obj
-
-
-
-
-
-
+    """
+    Calculate hash file content
+    """
+    hash_obj = hashlib.sha256(file_content)
+    return hash_obj
