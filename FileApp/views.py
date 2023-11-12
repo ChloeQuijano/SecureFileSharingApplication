@@ -245,7 +245,7 @@ def download_file(request, file_id):
         hash_bfr_download = hashlib.sha256(decrypted_content).hexdigest()
 
         response = HttpResponse(decrypted_content, content_type='application/force-download')
-        response['Content-Disposition'] = f'attachment; filename="{decrypted_file.file_name}"'
+        response['Content-Disposition'] = f'attachment; filename="{decrypted_file.file_name+ str(".txt")}"'
 
         # Calculate the hash digest of file after download
         hash_after_download= hashlib.sha256(response.content).hexdigest()
