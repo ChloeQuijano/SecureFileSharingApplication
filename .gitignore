@@ -8,4 +8,5 @@ __pycache__/
 # .github/
 FileApp/migrations/
 uploads/*
-
+htmlcov/*
+.coverage

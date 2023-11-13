@@ -17,9 +17,8 @@ logger = logging.getLogger(__name__)
 
 # ------------------------------------------------------------------#
 from FileApp.fileencrypt import *
-from .forms import UploadFileForm, LoginForm, RegisterForm
+from .forms import UploadFileForm, LoginForm, RegisterForm, ShareFileForm
 from .models import File, SharedFile, FileIntegrity
-from .forms import ShareFileForm
 from .userauth import *
 from .filevalidate import has_permission
 
@@ -125,7 +124,7 @@ def sign_out(request):
     messages.success(request, f'You have been logged out.')
     return redirect(reverse('file_app:login'))
 
-@login_required
+@login_required(login_url='file_app:login')
 def profile(request):
     """
     Profile page where all files are listed. Login required to access page
@@ -145,7 +144,7 @@ def profile(request):
 
     return render(request, "profile.html", context)
 
-@login_required
+@login_required(login_url='file_app:login')
 @csrf_protect
 def upload_file(request):
     """
@@ -196,7 +195,7 @@ def upload_file(request):
         form = UploadFileForm()
     return render(request, "upload_file.html", {"form": form})
 
-@login_required
+@login_required(login_url='file_app:login')
 @csrf_protect
 def share_file(request, file_id):
     """
@@ -255,7 +254,7 @@ def share_file(request, file_id):
         # We may want to log the exception for further analysis
         return redirect('file_app:profile')
 
-@login_required
+@login_required(login_url='file_app:login')
 def download_file(request, file_id):
     """
     Download the file for the user. Login required to access function

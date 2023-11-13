@@ -38,6 +38,14 @@ Other Instructions:
 
 ## Running tests
 
-Files for test cases are in tests.py file
+Files for test cases are in tests file. To run the tests:
 
 `py manage.py test`
+
+To run coverage report with tests:
+
+`coverage run ./manage.py test FileApp`
+
+This generates a `.coverage` file. To convert the file to an html for viewing, run:
+
+`coverage html`
