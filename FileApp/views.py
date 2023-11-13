@@ -7,7 +7,7 @@ from django.views.decorators.csrf import csrf_protect, csrf_exempt
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.db.models import Q
-from django.core.exceptions import PermissionDenied,ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 import hashlib
 import logging
 
@@ -48,15 +48,19 @@ def register(request):
                 if User.objects.filter(username=username).exists():
                     messages.error(request, "Username is already in use")
                     return render(request, "register.html", {"form": form})
+                    
+                #FIXME: same code repeated below with different message saying username is not valid - M
                 if not reg.is_email_valid():
                     messages.error(request, "Email is invalid format")
                     return render(request, "register.html", {"form": form})
                 if not reg.is_password_strong():
                     messages.error(request, "Password is not strong enough ")
                     return render(request, "register.html", {"form": form})
+                    
                 if not reg.is_email_valid():
                     messages.error(request, "Username is not valid, must be alphanumeric and underscores ")
                     return render(request, "register.html", {"form": form})
+                
                 if not reg.are_passwords_matching():
                     messages.error("Passwords are not matching")
                     return render(request, "register.html", {"form": form})
@@ -125,10 +129,6 @@ def profile(request):
     """
     Profile page where all files are listed. Login required to access page
     """
-    # Get files uploaded by the current user
-    # FIXME: not used, should we delete?
-    user_files = File.objects.filter(owner=request.user)
-
     # Get files shared with the current user
     shared_files = SharedFile.objects.filter(user=request.user).values('file')
 
@@ -200,50 +200,59 @@ def upload_file(request):
 def share_file(request, file_id):
     """
     Share file form and page. Login required to access page
-    TODO: Sanitize user input, anytime there's an input sanitize it
+    TODO: Sanitize user input, anytime there's an input sanitize it - I don't know what u mean by that? Isn't it already sanatized?
     """
+    try:
+        # Get the file object using the file_id
+        file_to_share = get_object_or_404(File, id=file_id)
 
-    # Get the file object using the file_id
-    file_to_share = get_object_or_404(File, id=file_id)
+        # Check if the file's owner is the current user
+        if file_to_share.owner != request.user:
+            messages.error(request, "You can only share your own files.")
+            return redirect('file_app:profile')
 
-    # Check if the file's owner is the current user
-    if file_to_share.owner != request.user:
-        messages.error(request, "You can only share your own files.")
+        if request.method == 'POST':
+            try:
+                form = ShareFileForm(request, request.POST)
+                if form.is_valid():
+                    # sanatized user input
+                    user_to_share = form.cleaned_data['shared_user']
+                    permission = form.cleaned_data['permission']
+
+                    # Check if a shared file entry with the same user and file already exists
+                    shared_file, created = SharedFile.objects.get_or_create(
+                        user=user_to_share,
+                        file=file_to_share,
+                        defaults={'permission': permission, 'file_name': file_to_share.file_name}
+                    )
+
+                    if not created:
+                        # Update the existing entry with a new permission
+                        shared_file.permission = permission
+                        shared_file.save()
+                        messages.success(request,f"File '{file_to_share.file_name}' has successfully been updated for {user_to_share.username}.")
+                    else:
+                        # Add comment to user - Anne
+                        messages.success(request,f"File '{file_to_share.file_name}' has successfully been shared with {user_to_share.username}.")
+            except Exception as e:
+                    messages.error(request, f"An error occurred while processing the form: {str(e)}")
+                    # We may want to log the exception for further analysis
+        else:
+            form = ShareFileForm(request)
+        # In the template, we should list users and provide a way to select a user to share the file with
+        users = User.objects.exclude(id=request.user.id)
+        context = {
+            'file': file_to_share,
+            'users': users,
+            'form': form,
+        }
+
+        return render(request, 'share_file.html', context)
+    
+    except Exception as e:
+        messages.error(request, f"An error occurred: {str(e)}")
+        # We may want to log the exception for further analysis
         return redirect('file_app:profile')
-
-    if request.method == 'POST':
-        form = ShareFileForm(request, request.POST)
-        if form.is_valid():
-            user_to_share = form.cleaned_data['shared_user']
-            permission = form.cleaned_data['permission']
-
-            # Check if a shared file entry with the same user and file already exists
-            shared_file, created = SharedFile.objects.get_or_create(
-                user=user_to_share,
-                file=file_to_share,
-                defaults={'permission': permission, 'file_name': file_to_share.file_name}
-            )
-
-            if not created:
-                # Update the existing entry with a new permission
-                shared_file.permission = permission
-                shared_file.save()
-                messages.success(request,f"File '{file_to_share.file_name}' has successfully been updated for {user_to_share.username}.")
-            else:
-                # Add comment to user - Anne
-                messages.success(request,f"File '{file_to_share.file_name}' has successfully been shared with {user_to_share.username}.")
-
-    else:
-        form = ShareFileForm(request)
-    # In the template, we should list users and provide a way to select a user to share the file with
-    users = User.objects.exclude(id=request.user.id)
-    context = {
-        'file': file_to_share,
-        'users': users,
-        'form': form,
-    }
-
-    return render(request, 'share_file.html', context)
 
 @login_required(login_url='file_app:login')
 def download_file(request, file_id):
@@ -283,6 +292,7 @@ def download_file(request, file_id):
             shared_file = get_object_or_404(SharedFile, id=file_id)
 
             # if you can edit a share file then you can download , edit then reuploaded
+            # FIXME: can you let the user download even when they have the read permision otherwise cannot view the file?
             if shared_file.permission == 'edit':
                 response = HttpResponse(shared_file.file.read(), content_type='application/force-download')
                 response['Content-Disposition'] = f'attachment; filename="{shared_file.file_name}"'
