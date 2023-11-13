@@ -264,7 +264,12 @@ def share_file(request, file_id):
             'form': form,
         }
 
-    return render(request, 'share_file.html', context)
+        return render(request, 'share_file.html', context)
+    
+    except Exception as e:
+        messages.error(request, f"An error occurred: {str(e)}")
+        # We may want to log the exception for further analysis
+        return redirect('file_app:profile')
 
 @login_required
 def download_file(request, file_id):
