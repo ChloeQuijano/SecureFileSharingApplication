@@ -9,3 +9,4 @@ FileApp/migrations/*
 uploads/*
 htmlcov/*
 .coverage
+pylint.txt

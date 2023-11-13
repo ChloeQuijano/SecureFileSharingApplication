@@ -49,3 +49,7 @@ To run coverage report with tests:
 This generates a `.coverage` file. To convert the file to an html for viewing, run:
 
 `coverage html`
+
+Running and creating pylint report:
+
+`pylint FileApp > pylint.txt`
