@@ -11,6 +11,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 import hashlib
 import logging
 
+
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -21,6 +22,7 @@ from .forms import UploadFileForm, LoginForm, RegisterForm, ShareFileForm
 from .models import File, SharedFile, FileIntegrity
 from .userauth import *
 from .filevalidate import has_permission
+from .fernet import get_fernet_key
 
 
 def home(request):
@@ -149,17 +151,13 @@ def profile(request):
 def upload_file(request):
     """
     Upload file form and page. Login required to access page
+    TODO: Sanitize user's input: file_name, check if it already exist..
     """
     if request.method == "POST":
         form = UploadFileForm(request.POST, request.FILES)
         # Handle checking file integrity here and create file object to save after checking
         if form.is_valid():
             try:
-                # checks if file title already exists for the user
-                if File.objects.filter(owner=request.user, file_name=form.cleaned_data['title']).exists():
-                    messages.error(request, "Title for file already exists in database. Please input a new title")
-                    return render(request, "upload_file.html", {"form": form})
-                
                 # Encrypts the data within the file
                 encryptor=FileEncryptor()
                 encryptor.file_encrypt(form.cleaned_data['file'])
@@ -167,27 +165,41 @@ def upload_file(request):
                 file_content = form.cleaned_data['file'].read()
 
                 # Calculate hash digest of file before saving
-                hash_bfr_save = file_hashing(file_content).hexdigest()
+                hash_bfr_save = file_hashing(file_content)
+                file.seek(0,0)
+                encrypted_file = encryptor.file_encrypt(file)
 
-                # Creates a new file and validates its content
+                logger.debug(f'File content before save {file_content}')
+             
                 file_instance = File.objects.create(
                     owner=request.user,
-                    file=form.cleaned_data['file'],
+                    file=encrypted_file,
                     file_name=form.cleaned_data['title'],
-                    file_size=form.cleaned_data['file'].size
+                    file_size=form.cleaned_data['file'].size,
+                    file_key = key_string
                 )
 
                 # Saves the file object to database
                 file_instance.save()
 
+
                 # Calculate hash digest of file after saving
-                hash_after_save = file_hashing(file_content).hexdigest()
+                decrypted_saved_file = encryptor.file_decrypt(file_instance.file)
+                decrypted_saved_file.seek(0,0)
+                decrypted_content = decrypted_saved_file.read()
+                hash_after_save = file_hashing(decrypted_content)
+                
+                logger.debug(f'File content after save { decrypted_content}')
+                
 
                 logger.debug(f'Hash before save: {hash_bfr_save}')
                 logger.debug(f'Hash after save: {hash_after_save}')
 
+
                 if hash_after_save == hash_bfr_save:
                     messages.success(request, f'File is successfully uploaded.')
+                    intergrity = FileIntegrity(file=file_instance, sha256_hash=hash_after_save)
+                    intergrity.save()
                     return redirect(reverse('file_app:profile')) # go back to profile page to see all the files
                 else:
                     # Delete corrupted file
@@ -205,7 +217,7 @@ def upload_file(request):
 def share_file(request, file_id):
     """
     Share file form and page. Login required to access page
-    TODO: Sanitize user input, anytime there's an input sanitize it - I don't know what u mean by that? Isn't it already sanatized?
+    TODO: Sanitize user input, anytime there's an input sanitize it
     """
     try:
         # Get the file object using the file_id
@@ -252,44 +264,41 @@ def share_file(request, file_id):
             'form': form,
         }
 
-        return render(request, 'share_file.html', context)
-    
-    except Exception as e:
-        messages.error(request, f"An error occurred: {str(e)}")
-        # We may want to log the exception for further analysis
-        return redirect('file_app:profile')
+    return render(request, 'share_file.html', context)
 
-@login_required(login_url='file_app:login')
+@login_required
 def download_file(request, file_id):
-    """
-    Download the file for the user. Login required to access function
-    FIXME: Downloaded file needs to be textfile type
-    """
     try:
-        # decrypts the file from the database
-        file = get_object_or_404(File, id=file_id)
-        encryptor = FileEncryptor()
-        decrypted_file = encryptor.file_decrypt(file)
-        decrypted_content = decrypted_file.file.read()
+        file_obj = get_object_or_404(File, id=file_id)
+        encryptor = FileEncryptor(file_obj.file_key)
+        decrypted_file = encryptor.file_decrypt(file_obj.file)
+        
+        logger.debug(f'File content in DB {encryptor.file_decrypt(file_obj.file).read()}')
+        
+        # Ensure the file pointer is at the beginning before reading
+        decrypted_file.seek(0,0)
+        decrypted_content = decrypted_file.read()
 
-        # Calculate the hash digest of file before download
-        hash_bfr_download = hashlib.sha256(decrypted_content).hexdigest()
+        # Calculate the hash digest of the file before download
+        # hash_bfr_download = hashlib.sha256(decrypted_content).hexdigest()
+        hash_bfr_download = FileIntegrity.objects.get(file = file_obj).sha256_hash
 
         response = HttpResponse(decrypted_content, content_type='application/force-download')
-        response['Content-Disposition'] = f'attachment; filename="{decrypted_file.file_name+ str(".txt")}"'
+        response['Content-Disposition'] = f'attachment; filename="{file_obj.file_name}.txt"'
 
-        # Calculate the hash digest of file after download
-        hash_after_download= hashlib.sha256(response.content).hexdigest()
+        # Calculate the hash digest of the file after download
+        hash_after_download = hashlib.sha256(response.content).hexdigest()
+        logger.debug(f'File content in download {response.content}')
 
-        # Log hash values for debugging -- TODO: Remove when we submit
+        # Log hash values for debugging -- TODO: Remove when submitting
         logger.debug(f'Hash before download: {hash_bfr_download}')
         logger.debug(f'Hash after download: {hash_after_download}')
 
-        # No two diff input even with the slightest change have the same hash digest unless modified
+        # No two different inputs even with the slightest change have the same hash digest unless modified
         if hash_bfr_download == hash_after_download:
             return response
         else:
-            messages.error(request, "File integrity has been comprised, can not download this file")
+            messages.error(request, "File integrity has been compromised, cannot download this file")
             return redirect('file_app:profile')
 
     except File.DoesNotExist:
@@ -297,22 +306,28 @@ def download_file(request, file_id):
             shared_file = get_object_or_404(SharedFile, id=file_id)
 
             # if you can edit a share file then you can download , edit then reuploaded
-            # FIXME: can you let the user download even when they have the read permision otherwise cannot view the file?
             if shared_file.permission == 'edit':
                 response = HttpResponse(shared_file.file.read(), content_type='application/force-download')
                 response['Content-Disposition'] = f'attachment; filename="{shared_file.file_name}"'
 
-                return response
+            # Calculate the hash digest of the file after download
+            hash_after_download_shared = hashlib.sha256(response_shared.content).hexdigest()
 
-            # no need   -- Remove when done
-            elif shared_file.permission == 'read':
-                messages.error(request, "No valid access")
+            # Log hash values for debugging -- TODO: Remove when submitting
+            logger.debug(f'Hash before download (shared): {hash_bfr_download_shared}')
+            logger.debug(f'Hash after download (shared): {hash_after_download_shared}')
+
+            # No two different inputs even with the slightest change have the same hash digest unless modified
+            if hash_bfr_download_shared == hash_after_download_shared:
+                return response_shared
+            else:
+                messages.error(request, "File integrity has been compromised, cannot download this shared file")
                 return redirect('file_app:profile')
 
         except SharedFile.DoesNotExist:
             messages.error(request, "No file with that id")
             return redirect('file_app:profile')
 
-    except ValidationError as e:
-        messages.error(request, f"File could not be decrypted: {str(e)}")
-        return redirect('file_app:profile')
+        except ValidationError as e:
+            messages.error(request, f"File could not be decrypted: {str(e)}")
+          
