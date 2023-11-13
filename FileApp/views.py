@@ -56,13 +56,13 @@ def register(request):
                 if not reg.is_password_strong():
                     messages.error(request, "Password is not strong enough ")
                     return render(request, "register.html", {"form": form})
-                if not reg.is_email_valid():
+                if not reg.is_username_valid():
                     messages.error(request, "Username is not valid, must be alphanumeric and underscores ")
                     return render(request, "register.html", {"form": form})
                 if not reg.are_passwords_matching():
                     messages.error("Passwords are not matching")
                     return render(request, "register.html", {"form": form})
-                elif reg.is_email_valid() and reg.is_password_strong() and reg.are_passwords_matching() and reg.are_passwords_matching():
+                elif reg.is_email_valid() and reg.is_password_strong() and reg.are_passwords_matching() and reg.are_passwords_matching() and reg.is_username_valid():
                     hashed = reg.hash_password()
                     user = User(username=username, email=email, password=hashed.decode('utf-8'))
                     user.save()
@@ -151,16 +151,16 @@ def upload_file(request):
     """
     if request.method == "POST":
         form = UploadFileForm(request.POST, request.FILES)
+        
         # Handle checking file integrity here and create file object to save after checking
         if form.is_valid():
             try:
-                # Encrypts the data within the file
+                # checks if file title already exists for the user
+                if File.objects.filter(owner=request.user, file_name=form.cleaned_data['title']).exists() or SharedFile.objects.filter(user=request.user, file__file_name = form.cleaned_data['title']).exists():
+                    messages.error(request, "Title for file already exists in database. Please input a new title")
+                    return render(request, "upload_file.html", {"form": form})
+                
                 key_string = get_fernet_key()
-                encryptor=FileEncryptor()
-                encryptor.file_encrypt(form.cleaned_data['file'])
-
-                file_content = form.cleaned_data['file'].read()
-
                 encryptor = FileEncryptor(key_string)
                 file = form.cleaned_data['file']
                 
