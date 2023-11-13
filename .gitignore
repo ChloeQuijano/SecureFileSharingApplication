@@ -5,8 +5,7 @@ __pycache__/
 *.sqlite3
 .DS_Store
 .idea/
-# .github/
-FileApp/migrations/
+FileApp/migrations/*
 uploads/*
 htmlcov/*
 .coverage

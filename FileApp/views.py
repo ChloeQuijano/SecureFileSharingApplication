@@ -2,12 +2,12 @@ from django.shortcuts import render, redirect, reverse, get_object_or_404
 from django.http import HttpResponse
 from django.contrib import messages
 from django.contrib.auth.models import User
-from django.contrib.auth import login as server_login, authenticate, logout
-from django.views.decorators.csrf import csrf_protect, csrf_exempt
+from django.contrib.auth import login as server_login,logout
+from django.views.decorators.csrf import csrf_protect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.db.models import Q
-from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.exceptions import ValidationError
 import hashlib
 import logging
 
@@ -50,22 +50,21 @@ def register(request):
                 if User.objects.filter(username=username).exists():
                     messages.error(request, "Username is already in use")
                     return render(request, "register.html", {"form": form})
-                    
-                #FIXME: same code repeated below with different message saying username is not valid - M
+
                 if not reg.is_email_valid():
                     messages.error(request, "Email is invalid format")
                     return render(request, "register.html", {"form": form})
                 if not reg.is_password_strong():
                     messages.error(request, "Password is not strong enough ")
-                    return render(request, "register.html", {"form": form})
-                    
+                    return render(request, "register.html", {"form": form})   
+                       
                 if not reg.is_email_valid():
                     messages.error(request, "Username is not valid, must be alphanumeric and underscores ")
-                    return render(request, "register.html", {"form": form})
-                
+                    return render(request, "register.html", {"form": form})     
                 if not reg.are_passwords_matching():
                     messages.error("Passwords are not matching")
                     return render(request, "register.html", {"form": form})
+                
                 elif reg.is_email_valid() and reg.is_password_strong() and reg.are_passwords_matching() and reg.are_passwords_matching():
                     hashed = reg.hash_password()
                     user = User(username=username, email=email, password=hashed.decode('utf-8'))
@@ -159,11 +158,19 @@ def upload_file(request):
         if form.is_valid():
             try:
                 # Encrypts the data within the file
+                key_string = get_fernet_key()
                 encryptor=FileEncryptor()
                 encryptor.file_encrypt(form.cleaned_data['file'])
 
                 file_content = form.cleaned_data['file'].read()
 
+                encryptor = FileEncryptor(key_string)
+                file = form.cleaned_data['file']
+                
+                # Read the content from the file     
+                file.seek(0,0)
+                file_content =file.read()
+                
                 # Calculate hash digest of file before saving
                 hash_bfr_save = file_hashing(file_content)
                 file.seek(0,0)
@@ -184,13 +191,7 @@ def upload_file(request):
 
 
                 # Calculate hash digest of file after saving
-                decrypted_saved_file = encryptor.file_decrypt(file_instance.file)
-                decrypted_saved_file.seek(0,0)
-                decrypted_content = decrypted_saved_file.read()
-                hash_after_save = file_hashing(decrypted_content)
-                
-                logger.debug(f'File content after save { decrypted_content}')
-                
+                hash_after_save = file_hashing(file_content).hexdigest()
 
                 logger.debug(f'Hash before save: {hash_bfr_save}')
                 logger.debug(f'Hash after save: {hash_after_save}')
@@ -217,7 +218,7 @@ def upload_file(request):
 def share_file(request, file_id):
     """
     Share file form and page. Login required to access page
-    TODO: Sanitize user input, anytime there's an input sanitize it
+    TODO: Sanitize user input, anytime there's an input sanitize it - I don't know what u mean by that? Isn't it already sanatized?
     """
     try:
         # Get the file object using the file_id
@@ -271,18 +272,18 @@ def share_file(request, file_id):
         # We may want to log the exception for further analysis
         return redirect('file_app:profile')
 
-@login_required
+@login_required(login_url='file_app:login')
 def download_file(request, file_id):
+    """
+    Download the file for the user. Login required to access function
+    FIXME: Downloaded file needs to be textfile type
+    """
     try:
-        file_obj = get_object_or_404(File, id=file_id)
-        encryptor = FileEncryptor(file_obj.file_key)
-        decrypted_file = encryptor.file_decrypt(file_obj.file)
-        
-        logger.debug(f'File content in DB {encryptor.file_decrypt(file_obj.file).read()}')
-        
-        # Ensure the file pointer is at the beginning before reading
-        decrypted_file.seek(0,0)
-        decrypted_content = decrypted_file.read()
+        # decrypts the file from the database
+        file = get_object_or_404(File, id=file_id)
+        encryptor = FileEncryptor()
+        decrypted_file = encryptor.file_decrypt(file)
+        decrypted_content = decrypted_file.file.read()
 
         # Calculate the hash digest of the file before download
         # hash_bfr_download = hashlib.sha256(decrypted_content).hexdigest()
@@ -311,28 +312,22 @@ def download_file(request, file_id):
             shared_file = get_object_or_404(SharedFile, id=file_id)
 
             # if you can edit a share file then you can download , edit then reuploaded
+            # FIXME: can you let the user download even when they have the read permision otherwise cannot view the file?
             if shared_file.permission == 'edit':
                 response = HttpResponse(shared_file.file.read(), content_type='application/force-download')
                 response['Content-Disposition'] = f'attachment; filename="{shared_file.file_name}"'
 
-            # Calculate the hash digest of the file after download
-            hash_after_download_shared = hashlib.sha256(response_shared.content).hexdigest()
+                return response
 
-            # Log hash values for debugging -- TODO: Remove when submitting
-            logger.debug(f'Hash before download (shared): {hash_bfr_download_shared}')
-            logger.debug(f'Hash after download (shared): {hash_after_download_shared}')
-
-            # No two different inputs even with the slightest change have the same hash digest unless modified
-            if hash_bfr_download_shared == hash_after_download_shared:
-                return response_shared
-            else:
-                messages.error(request, "File integrity has been compromised, cannot download this shared file")
+            # no need   -- Remove when done
+            elif shared_file.permission == 'read':
+                messages.error(request, "No valid access")
                 return redirect('file_app:profile')
 
         except SharedFile.DoesNotExist:
             messages.error(request, "No file with that id")
             return redirect('file_app:profile')
 
-        except ValidationError as e:
-            messages.error(request, f"File could not be decrypted: {str(e)}")
-          
+    except ValidationError as e:
+        messages.error(request, f"File could not be decrypted: {str(e)}")
+        return redirect('file_app:profile')
