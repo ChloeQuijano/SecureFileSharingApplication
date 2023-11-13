@@ -29,7 +29,7 @@ Profile
                                 {% endif %}
                                 <span>{{ file_info.file.file_name }}</span>
                                 <span class="badge bg-secondary rounded-pill">{{ file_info.file.get_file_size_kb }} KB</span>
-                            {% if file_info.file.owner == request.user  %}
+                            {% if file_info.file.owner == request.user   %}
                                  <a href="{% url 'file_app:share_file' file_info.file.id %}" class="btn btn-primary">Share</a>
                             {% endif %}
                                 {% if file_info.has_permission%}

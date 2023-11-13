@@ -273,8 +273,7 @@ def share_file(request, file_id):
         # We may want to log the exception for further analysis
         return redirect('file_app:profile')
 
-
-@login_required(login_url='file_app:login')
+@login_required
 def download_file(request, file_id):
     """
     Download the file for the user. Login required to access function
