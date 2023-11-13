@@ -32,10 +32,17 @@ class ShareFileForm(forms.Form):
     """
     def __init__(self, request, *args, **kwargs):
         super(ShareFileForm, self).__init__(*args, **kwargs)
-        self.request = request  # Set the request attribute
+
+        # Extract the user object from either User or request
+        if isinstance(request, User):
+            user = request
+        elif hasattr(request, 'user'):
+            user = request.user
+        else:
+            raise ValueError("Invalid user_or_request argument")
 
         # Exclude current user
-        self.fields['shared_user'].queryset = User.objects.exclude(id = request.user.id)
+        self.fields['shared_user'].queryset = User.objects.exclude(id = user.id)
 
     shared_user = forms.ModelChoiceField(
         queryset=User.objects.none(),
