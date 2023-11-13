@@ -7,7 +7,7 @@ from django.views.decorators.csrf import csrf_protect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.db.models import Q
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied,ValidationError
 import hashlib
 import logging
 
@@ -50,21 +50,18 @@ def register(request):
                 if User.objects.filter(username=username).exists():
                     messages.error(request, "Username is already in use")
                     return render(request, "register.html", {"form": form})
-
                 if not reg.is_email_valid():
                     messages.error(request, "Email is invalid format")
                     return render(request, "register.html", {"form": form})
                 if not reg.is_password_strong():
                     messages.error(request, "Password is not strong enough ")
-                    return render(request, "register.html", {"form": form})   
-                       
+                    return render(request, "register.html", {"form": form})
                 if not reg.is_email_valid():
                     messages.error(request, "Username is not valid, must be alphanumeric and underscores ")
-                    return render(request, "register.html", {"form": form})     
+                    return render(request, "register.html", {"form": form})
                 if not reg.are_passwords_matching():
                     messages.error("Passwords are not matching")
                     return render(request, "register.html", {"form": form})
-                
                 elif reg.is_email_valid() and reg.is_password_strong() and reg.are_passwords_matching() and reg.are_passwords_matching():
                     hashed = reg.hash_password()
                     user = User(username=username, email=email, password=hashed.decode('utf-8'))
@@ -191,8 +188,12 @@ def upload_file(request):
 
 
                 # Calculate hash digest of file after saving
-                hash_after_save = file_hashing(file_content).hexdigest()
-
+                decrypted_saved_file = encryptor.file_decrypt(file_instance.file)
+                decrypted_saved_file.seek(0,0)
+                decrypted_content = decrypted_saved_file.read()
+                hash_after_save = file_hashing(decrypted_content)
+                
+                # TODO: rm - when done
                 logger.debug(f'Hash before save: {hash_bfr_save}')
                 logger.debug(f'Hash after save: {hash_after_save}')
 
@@ -272,6 +273,7 @@ def share_file(request, file_id):
         # We may want to log the exception for further analysis
         return redirect('file_app:profile')
 
+
 @login_required(login_url='file_app:login')
 def download_file(request, file_id):
     """
@@ -279,14 +281,17 @@ def download_file(request, file_id):
     FIXME: Downloaded file needs to be textfile type
     """
     try:
-        # decrypts the file from the database
-        file = get_object_or_404(File, id=file_id)
-        encryptor = FileEncryptor()
-        decrypted_file = encryptor.file_decrypt(file)
-        decrypted_content = decrypted_file.file.read()
+        file_obj = get_object_or_404(File, id=file_id)
+        encryptor = FileEncryptor(file_obj.file_key)
+        decrypted_file = encryptor.file_decrypt(file_obj.file)
+        
+        logger.debug(f'File content in DB {encryptor.file_decrypt(file_obj.file).read()}')
+        
+        # Ensure the file pointer is at the beginning before reading
+        decrypted_file.seek(0,0)
+        decrypted_content = decrypted_file.read()
 
         # Calculate the hash digest of the file before download
-        # hash_bfr_download = hashlib.sha256(decrypted_content).hexdigest()
         hash_bfr_download = FileIntegrity.objects.get(file = file_obj).sha256_hash
 
         response = HttpResponse(decrypted_content, content_type='application/force-download')
@@ -294,9 +299,8 @@ def download_file(request, file_id):
 
         # Calculate the hash digest of the file after download
         hash_after_download = hashlib.sha256(response.content).hexdigest()
-        logger.debug(f'File content in download {response.content}')
-
-        # Log hash values for debugging -- TODO: Remove when submitting
+    
+        # Log hash values for debugging -- TODO: rm when when
         logger.debug(f'Hash before download: {hash_bfr_download}')
         logger.debug(f'Hash after download: {hash_after_download}')
 
@@ -307,27 +311,7 @@ def download_file(request, file_id):
             messages.error(request, "File integrity has been compromised, cannot download this file")
             return redirect('file_app:profile')
 
-    except File.DoesNotExist:
-        try:
-            shared_file = get_object_or_404(SharedFile, id=file_id)
-
-            # if you can edit a share file then you can download , edit then reuploaded
-            # FIXME: can you let the user download even when they have the read permision otherwise cannot view the file?
-            if shared_file.permission == 'edit':
-                response = HttpResponse(shared_file.file.read(), content_type='application/force-download')
-                response['Content-Disposition'] = f'attachment; filename="{shared_file.file_name}"'
-
-                return response
-
-            # no need   -- Remove when done
-            elif shared_file.permission == 'read':
-                messages.error(request, "No valid access")
-                return redirect('file_app:profile')
-
-        except SharedFile.DoesNotExist:
-            messages.error(request, "No file with that id")
-            return redirect('file_app:profile')
-
-    except ValidationError as e:
-        messages.error(request, f"File could not be decrypted: {str(e)}")
+    except File.DoesNotExist as e:
+        messages.error(request, f"File does not exist: {str(e)}")
         return redirect('file_app:profile')
+        
