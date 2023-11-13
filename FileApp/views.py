@@ -155,6 +155,11 @@ def upload_file(request):
         # Handle checking file integrity here and create file object to save after checking
         if form.is_valid():
             try:
+                # checks if file title already exists for the user
+                if File.objects.filter(owner=request.user, file_name=form.cleaned_data['title']).exists():
+                    messages.error(request, "Title for file already exists in database. Please input a new title")
+                    return render(request, "upload_file.html", {"form": form})
+                
                 # Encrypts the data within the file
                 encryptor=FileEncryptor()
                 encryptor.file_encrypt(form.cleaned_data['file'])
