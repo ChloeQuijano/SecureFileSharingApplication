@@ -47,5 +47,5 @@ def has_permission(file, user):
         return True
 
     # Check if the file is shared with the user and has 'edit' permission
-    shared_file = SharedFile.objects.filter(file=file, user=user, permission='edit').first()
+    shared_file = SharedFile.objects.filter(file=file, user=user).first()
     return shared_file is not None

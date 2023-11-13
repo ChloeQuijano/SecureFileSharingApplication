@@ -8,6 +8,7 @@ class File(models.Model):
     owner = models.ForeignKey(User, on_delete=models.CASCADE)  # The user who uploaded the file
     file_name = models.CharField(max_length=255)
     file = models.FileField(upload_to='uploads')
+    file_key = models.CharField(max_length=500, default='None')
     encrypted = models.BooleanField(default=True)
     upload_date = models.DateTimeField(auto_now_add=True)
     shared_with = models.ManyToManyField(User, related_name='shared_files', blank=True)

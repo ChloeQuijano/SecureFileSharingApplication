@@ -13,7 +13,6 @@ class Validation:
 
     @staticmethod
     # At least one upper case, lower case and digit and one special char in "!@#$&/"
-    # FIXME: needs to also check if it is similar to the other personal information being entered
     def strong_password(password):
         pattern = r"^(?=.*[A-Z])(?=.*[a-z])(?=.*[!@#$&/*])(?=.*\d).{6,}$"
         return re.match(pattern, password)
