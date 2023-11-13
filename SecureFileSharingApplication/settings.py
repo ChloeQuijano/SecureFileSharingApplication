@@ -28,7 +28,7 @@ SECRET_KEY = '9ix!u*op%4a#)!9e(1kkku(jz!#vlj(8iqfqko4ig&(*0a^cj4'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['.vercel.app'] # Allow *.vercel.app
 
 
 # Application definition
@@ -89,25 +89,7 @@ config  = Config(RepositoryEnv(env_path))
 
  # take environment variables from .env.
 
-if 'test' in sys.argv:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': ':memory:',
-        }
-    }
-    AUTH_USER_MODEL = 'auth.User'
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': config('DB_NAME'),
-            'USER': config('DB_USER'),
-            'PASSWORD': config('DB_PASSWORD'),
-            'HOST': config('DB_HOST'),
-            'PORT': config('DB_PORT'),
-        }
-    }
+DATABASES = {} # Prevent Django from loading an adapter
 
 
 
