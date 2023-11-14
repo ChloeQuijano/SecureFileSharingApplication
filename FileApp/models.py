@@ -19,7 +19,6 @@ class File(models.Model):
     def get_file_size_kb(self):
         """
         Convert file size in bytes to KB
-        FIXME: can improve to be dynamic with MB or KB
         """
         return round(self.file_size / (1024), 2)
     

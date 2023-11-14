@@ -147,7 +147,6 @@ def profile(request):
 def upload_file(request):
     """
     Upload file form and page. Login required to access page
-    TODO: Sanitize user's input: file_name, check if it already exist..
     """
     if request.method == "POST":
         form = UploadFileForm(request.POST, request.FILES)
@@ -172,8 +171,6 @@ def upload_file(request):
                 hash_bfr_save = file_hashing(file_content)
                 file.seek(0,0)
                 encrypted_file = encryptor.file_encrypt(file)
-
-                logger.debug(f'File content before save {file_content}')
              
                 file_instance = File.objects.create(
                     owner=request.user,
@@ -192,11 +189,6 @@ def upload_file(request):
                 decrypted_saved_file.seek(0,0)
                 decrypted_content = decrypted_saved_file.read()
                 hash_after_save = file_hashing(decrypted_content)
-                
-                # TODO: rm - when done
-                logger.debug(f'Hash before save: {hash_bfr_save}')
-                logger.debug(f'Hash after save: {hash_after_save}')
-
 
                 if hash_after_save == hash_bfr_save:
                     messages.success(request, f'File is successfully uploaded.')
@@ -219,7 +211,6 @@ def upload_file(request):
 def share_file(request, file_id):
     """
     Share file form and page. Login required to access page
-    TODO: Sanitize user input, anytime there's an input sanitize it - I don't know what u mean by that? Isn't it already sanatized?
     """
     try:
         # Get the file object using the file_id
@@ -277,14 +268,12 @@ def share_file(request, file_id):
 def download_file(request, file_id):
     """
     Download the file for the user. Login required to access function
-    FIXME: Downloaded file needs to be textfile type
     """
     try:
         file_obj = get_object_or_404(File, id=file_id)
         encryptor = FileEncryptor(file_obj.file_key)
         decrypted_file = encryptor.file_decrypt(file_obj.file)
-        
-        logger.debug(f'File content in DB {encryptor.file_decrypt(file_obj.file).read()}')
+    
         
         # Ensure the file pointer is at the beginning before reading
         decrypted_file.seek(0,0)
@@ -298,10 +287,6 @@ def download_file(request, file_id):
 
         # Calculate the hash digest of the file after download
         hash_after_download = hashlib.sha256(response.content).hexdigest()
-    
-        # Log hash values for debugging -- TODO: rm when when
-        logger.debug(f'Hash before download: {hash_bfr_download}')
-        logger.debug(f'Hash after download: {hash_after_download}')
 
         # No two different inputs even with the slightest change have the same hash digest unless modified
         if hash_bfr_download == hash_after_download:
