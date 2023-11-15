@@ -1,5 +1,7 @@
-from django.contrib import admin
-from django.urls import path, include 
+"""
+Here is where the urls for routing in our app happens
+"""
+from django.urls import path
 from . import views
 
 app_name = 'file_app'

@@ -1,18 +1,19 @@
+from unittest.mock import patch
 from django.test import TestCase, Client
 from django.core.files.base import ContentFile
+from django.contrib.messages import get_messages
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.contrib.auth.models import User  # For user authentication
 from FileApp.forms import LoginForm, RegisterForm, ShareFileForm, UploadFileForm
 from FileApp.models import File
-from django.contrib.auth.models import User  # For user authentication
-from django.core.files.uploadedfile import SimpleUploadedFile
 from FileApp.views import *
-from django.contrib.messages import get_messages
-from unittest.mock import patch
 
 class UploadFormTestClass(TestCase):
     """Tests for Upload File form"""
 
     @classmethod
     def setUp(self):
+        """Set up user and test file"""
         # user account created
         self.user = User.objects.create_user(username='testuser', password='testpassword')
         self.client = Client()
@@ -22,7 +23,7 @@ class UploadFormTestClass(TestCase):
         self.test_uploaded_file = SimpleUploadedFile("test_file.txt", file_content)
 
     def test_uploadform_valid_data(self):
-        # Test uploading file with valid inputs through POST request
+        """Test uploading file with valid inputs through POST request"""
         # log in user
         self.client.login(username='testuser', password='testpassword')
         
@@ -32,7 +33,7 @@ class UploadFormTestClass(TestCase):
         self.assertEqual(response.status_code, 302)
 
     def test_uploadform_missing_title(self):
-        # test the form with missing title
+        """Test the upload file form with missing title"""
         # log in user
         self.client.login(username='testuser', password='testpassword')
 
@@ -42,13 +43,18 @@ class UploadFormTestClass(TestCase):
         self.assertIn('title', form.errors)
 
     def test_uploadform_invalid_file(self):
-        # Test the form with an invalid file type
+        """Test the upload file form with an invalid file type"""
         # log in user
         self.client.login(username='testuser', password='testpassword')
 
         content = b'Test file content'
         file_content = ContentFile(content, name='test.jpg')
-        test_invalid_file = File.objects.create(owner=self.user, file=file_content, file_name='Test file', file_size=file_content.size)
+        test_invalid_file = File.objects.create(
+            owner=self.user,
+            file=file_content,
+            file_name='Test file',
+            file_size=file_content.size
+        )
 
         form_data = {'title': 'Test Title', 'file': test_invalid_file}
         form = UploadFileForm(data=form_data)
@@ -56,6 +62,7 @@ class UploadFormTestClass(TestCase):
         self.assertIn('file', form.errors)
     
     def test_empty_form(self):
+        """Test the upload file form with no data"""
         # log in user
         self.client.login(username='testuser', password='testpassword')
 
@@ -69,7 +76,7 @@ class RegisterFormTestClass(TestCase):
     """Tests for user registration form"""
 
     def test_valid_data(self):
-        # Test the form with valid data
+        """Test the form with valid data"""
         form_data = {
             'username': 'testuser',
             'email': 'testuser@example.com',
@@ -80,7 +87,7 @@ class RegisterFormTestClass(TestCase):
         self.assertTrue(form.is_valid())
 
     def test_passwords_not_matching(self):
-        # Test the form with non-matching passwords
+        """Test the form with non-matching passwords"""
         form_data = {
             'username': 'testuser',
             'email': 'testuser@example.com',
@@ -92,7 +99,7 @@ class RegisterFormTestClass(TestCase):
         self.assertIn('password2', form.errors)
 
     def test_existing_username(self):
-        # Test the form with an existing username
+        """Test the form with an existing username"""
         User.objects.create_user(username='existinguser', password='password123')
         form_data = {
             'username': 'existinguser',
@@ -105,8 +112,12 @@ class RegisterFormTestClass(TestCase):
         self.assertIn('username', form.errors)
 
     def test_existing_email(self):
-        # Test the form with an existing email
-        User.objects.create_user(username='newuser', email='existinguser@example.com', password='password123')
+        """Test the form with an existing email"""
+        User.objects.create_user(
+            username='newuser',
+            email='existinguser@example.com',
+            password='password123'
+        )
         form_data = {
             'username': 'newuser',
             'email': 'existinguser@example.com',
@@ -117,7 +128,7 @@ class RegisterFormTestClass(TestCase):
         self.assertFalse(form.is_valid())
 
     def test_empty_form(self):
-        # Test the form with no data
+        """Test the form with no data"""
         form = RegisterForm(data={})
         self.assertFalse(form.is_valid())
         self.assertIn('username', form.errors)
@@ -129,25 +140,25 @@ class LoginFormTestClass(TestCase):
 
     @classmethod
     def setUp(self):
-        # Create a test user
+        """Create a test user"""
         self.test_user = User.objects.create_user(username='testuser', password='testpassword')
         self.client = Client()
 
     def test_valid_data(self):
-        # Test the form with valid data
+        """Test the form with valid data"""
         form_data = {'username': 'testuser', 'password': 'testpassword'}
         form = LoginForm(data=form_data)
         self.assertTrue(form.is_valid())
 
     def test_missing_username(self):
-        # Test the form with a missing 'username' field
+        """Test the form with a missing 'username' field"""
         form_data = {'password': 'testpassword'}
         form = LoginForm(data=form_data)
         self.assertFalse(form.is_valid())
         self.assertIn('username', form.errors)
 
     def test_missing_password(self):
-        # Test the form with a missing 'password' field
+        """Test the form with a missing 'password' field"""
         form_data = {'username': 'testuser'}
         form = LoginForm(data=form_data)
         self.assertFalse(form.is_valid())
@@ -155,8 +166,11 @@ class LoginFormTestClass(TestCase):
 
     @patch('bcrypt.checkpw', return_value=False)  # Mock the bcrypt.checkpw function
     def test_invalid_credentials(self, mock_checkpw):
-        # Test logging in with invalid credentials through POST request
-        response = self.client.post(reverse('file_app:login'), {'username': 'testuser', 'password': 'invalidpassword'})
+        """Test logging in with invalid credentials through POST request"""
+        response = self.client.post(reverse('file_app:login'), {
+            'username': 'testuser',
+            'password': 'invalidpassword'
+        })
         
         # Check that the response is not a redirect
         self.assertEqual(response.status_code, 200)
@@ -167,7 +181,7 @@ class LoginFormTestClass(TestCase):
         self.assertEqual(str(messages[0]), "Invalid username or password")
 
     def test_empty_form(self):
-        # Test the form with no data
+        """Test the form with no data"""
         form = LoginForm(data={})
         self.assertFalse(form.is_valid())
         self.assertIn('username', form.errors)
@@ -178,12 +192,12 @@ class ShareFileFormTestClass(TestCase):
 
     @classmethod
     def setUp(self):
-        # Create a test user
+        """Create a test user"""
         self.test_user = User.objects.create_user(username='testuser', password='testpassword')
         self.client = Client()
 
     def test_form_initialization(self):
-        # Test form initialization with a request and without errors
+        """Test form initialization with a request and without errors"""
         # log in user
         self.client.login(username='testuser', password='testpassword')
 
@@ -191,22 +205,33 @@ class ShareFileFormTestClass(TestCase):
 
         # Check that the queryset excludes the current user
         expected_queryset = User.objects.exclude(id=self.test_user.id)
-        self.assertQuerysetEqual(form.fields['shared_user'].queryset, expected_queryset, transform=lambda x: x)
+        self.assertQuerysetEqual(
+            form.fields['shared_user'].queryset,
+            expected_queryset, transform=lambda x: x
+        )
 
-        self.assertTrue(isinstance(form.fields['shared_user'].queryset, type(User.objects.exclude(id=self.test_user.id))))
+        self.assertTrue(isinstance(
+            form.fields['shared_user'].queryset,
+            type(User.objects.exclude(id=self.test_user.id))
+        ))
         self.assertEqual(form.fields['permission'].initial, 'read')
 
     def test_valid_data(self):
+        """Tests the shared file form with valid inputs"""
         # log in user
         self.client.login(username='testuser', password='testpassword')
 
         # Test the form with valid data
-        shared_user = User.objects.create_user(username='shareduser', password='sharedpassword')
+        shared_user = User.objects.create_user(
+            username='shareduser',
+            password='sharedpassword'
+        )
         form_data = {'shared_user': shared_user.id, 'permission': 'edit'}
         form = ShareFileForm(request=self.test_user, data=form_data)
         self.assertTrue(form.is_valid())
 
     def test_missing_shared_user(self):
+        """Test missing shared user in share file form"""
         # log in user
         self.client.login(username='testuser', password='testpassword')
 
@@ -217,6 +242,7 @@ class ShareFileFormTestClass(TestCase):
         self.assertIn('shared_user', form.errors)
 
     def test_missing_permission(self):
+        """Test missing permission input for share file form"""
         # log in user
         self.client.login(username='testuser', password='testpassword')
 
@@ -228,6 +254,7 @@ class ShareFileFormTestClass(TestCase):
         self.assertIn('permission', form.errors)
 
     def test_empty_form(self):
+        """Tests an empty share file form"""
         # log in user
         self.client.login(username='testuser', password='testpassword')
 

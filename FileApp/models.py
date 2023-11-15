@@ -21,8 +21,9 @@ class File(models.Model):
         Convert file size in bytes to KB
         """
         return round(self.file_size / (1024), 2)
-    
+
     def __str__(self):
+        """Returns the file name"""
         return self.file_name
 
 class FileIntegrity(models.Model):
@@ -31,7 +32,9 @@ class FileIntegrity(models.Model):
     """
     file = models.ForeignKey(File, on_delete=models.CASCADE)
     sha256_hash = models.CharField(max_length=64)
+
     def __str__(self):
+        """Returns the file name"""
         return self.file.file_name
 
 class SharedFile(models.Model):
@@ -43,8 +46,9 @@ class SharedFile(models.Model):
     access_date = models.DateTimeField(auto_now=True) # optional
     permission = models.CharField(max_length=50)  # We can use this field to specify the level of access (e.g., read, edit, delete)
     file_name = models.CharField(max_length=255)
-    
+
     def __str__(self):
+        """Returns the username, filename and permission level"""
         return f"{self.user.username} - {self.file.file_name} ({self.permission})"
     class Meta:
         unique_together = ['user', 'file']  # Ensure each user can only share a file with a specific user once

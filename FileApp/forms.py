@@ -1,6 +1,8 @@
+"""
+Classes for forms models
+"""
 from django import forms
 from django.contrib.auth.models import User
-from .models import File
 from django.contrib.auth.forms import UserCreationForm
 from FileApp.filevalidate import FileValidation
 
@@ -16,6 +18,7 @@ class RegisterForm(UserCreationForm):
     Form for user registration
     """
     class Meta:
+        """Gets User class model"""
         model=User
         fields = ['username','email','password1','password2']
 
@@ -56,8 +59,3 @@ class ShareFileForm(forms.Form):
         initial='read',
         widget=forms.RadioSelect,
     )
-
-
-
-
-

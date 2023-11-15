@@ -1,14 +1,17 @@
+"""
+Tests for page views
+"""
 from django.test import TestCase, Client
 from django.contrib.auth.models import User  # For user authentication
 from django.core.files.base import ContentFile
+from django.urls import reverse
 from FileApp.forms import LoginForm, RegisterForm
 from FileApp.models import File
-from django.urls import reverse
 from FileApp.views import *
 
 class ViewsTestClass(TestCase):
     """Tests for views without login required"""
-    
+
     def test_home_loads_properly(self):
         """Check that home loads properly"""
         response = self.client.get(reverse('file_app:home'))
@@ -45,19 +48,23 @@ class UnauthenticatedViewsTestClass(TestCase):
         # create test file object
         content = b'Test file content'
         file_content = ContentFile(content, name='test_file.txt')
-        self.test_file = File.objects.create(owner=self.user, file=file_content, file_name='Test file', file_size=file_content.size)
-        
+        self.test_file = File.objects.create(
+            owner=self.user,
+            file=file_content,
+            file_name='Test file',
+            file_size=file_content.size
+        )
 
     def test_profile_loads_properly_unauthenticated_user(self):
         """Check that the profile page loads properly with no user"""
         response = self.client.get(reverse('file_app:profile'))
         self.assertEqual(response.status_code, 302) # redirects to login
-    
+
     def test_upload_loads_properly_unauthenticated_user(self):
         """Check that the file upload page loads properly with no user"""
         response = self.client.get(reverse('file_app:upload_file'))
         self.assertEqual(response.status_code, 302) #redirects user
-    
+
     def test_share_loads_properly_unauthenticated_user(self):
         """Check that the file share page loads properly with no logged in user"""
         url = reverse('file_app:share_file', args=[self.test_file.id])
@@ -79,7 +86,12 @@ class AuthenticatedViewsTestClass(TestCase):
         # create test file object
         content = b'Test file content'
         file_content = ContentFile(content, name='test_file.txt')
-        self.test_file = File.objects.create(owner=self.user, file=file_content, file_name='Test file', file_size=file_content.size)
+        self.test_file = File.objects.create(
+            owner=self.user,
+            file=file_content,
+            file_name='Test file',
+            file_size=file_content.size
+        )
 
     def test_profile_loads_properly_authenticated_user(self):
         """Check that the profile page loads properly with a logged in user"""
@@ -88,7 +100,7 @@ class AuthenticatedViewsTestClass(TestCase):
 
         response = self.client.get(reverse('file_app:profile'))
         self.assertEqual(response.status_code, 200)
-    
+
     def test_upload_loads_properly_authenticated_user(self):
         """Check that the file upload page loads properly with a logged in user"""
         # Log in the user
@@ -99,7 +111,7 @@ class AuthenticatedViewsTestClass(TestCase):
 
         # checks that the upload page contains expected content
         self.assertContains(response, 'Upload a file below')
-    
+
     def test_share_loads_properly_authenticated_user(self):
         """Check that the file share page loads properly with a logged in user"""
         # Log in the user

@@ -1,6 +1,9 @@
-from cryptography.fernet import Fernet
+"""
+Class for encrypting the files
+"""
 import hashlib
 from io import BytesIO
+from cryptography.fernet import Fernet
 
 class FileEncryptor():
     """
@@ -13,12 +16,11 @@ class FileEncryptor():
         """
         Takes the InMemoryUploadedFile object and encrypts the data within
         """
-        
         f = Fernet(self.key)
 
         # open the file
         original = original_file.read()
-        
+
         # encrypt data in file
         encrypted_data = f.encrypt(original)
 
@@ -35,7 +37,6 @@ class FileEncryptor():
         """
         Takes a File object input and decrypts the data within and rewrites it to a new file object for return
         """
-        
         f = Fernet(self.key)
 
         # open the encrypted file
@@ -48,7 +49,6 @@ class FileEncryptor():
         decrypted_instance.seek(0)
 
         return decrypted_instance
-
 
 def file_hashing(file_content):
     """
