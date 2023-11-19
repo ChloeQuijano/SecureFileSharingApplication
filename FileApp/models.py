@@ -24,6 +24,7 @@ class File(models.Model):
 
     def __str__(self):
         """Returns the file name"""
+        # TODO: Test returning this function
         return self.file_name
 
 class FileIntegrity(models.Model):
@@ -35,6 +36,7 @@ class FileIntegrity(models.Model):
 
     def __str__(self):
         """Returns the file name"""
+        # TODO: Test returning this function
         return self.file.file_name
 
 class SharedFile(models.Model):
@@ -49,6 +51,7 @@ class SharedFile(models.Model):
 
     def __str__(self):
         """Returns the username, filename and permission level"""
+        # TODO: Test returning this statement
         return f"{self.user.username} - {self.file.file_name} ({self.permission})"
     class Meta:
         unique_together = ['user', 'file']  # Ensure each user can only share a file with a specific user once

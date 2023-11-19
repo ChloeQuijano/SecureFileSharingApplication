@@ -35,6 +35,7 @@ def register(request):
     Register a new user account page
     """
     if request.method == "POST":
+        # TODO: Test going through POST request
         form = RegisterForm(request.POST)
         if form.is_valid():
             # Sanitize input
@@ -94,6 +95,7 @@ def client_login(request):
             try:
                 user = User.objects.get(username=username)
             except User.DoesNotExist:
+                # TODO: Test when user doesn't exist
                 user = None
 
             if user is not None:
@@ -116,6 +118,7 @@ def sign_out(request):
     """
     Sign out page where user is logged out. Redirects logout user to login page
     """
+    # TODO: Test view
     logout(request)
     messages.success(request, 'You have been logged out.')
     return redirect(reverse('file_app:login'))
@@ -154,6 +157,7 @@ def upload_file(request):
             try:
                 # checks if file title already exists for the user
                 if File.objects.filter(owner=request.user, file_name=form.cleaned_data['title']).exists() or SharedFile.objects.filter(user=request.user, file__file_name = form.cleaned_data['title']).exists():
+                    # TODO: Test reaching this error
                     messages.error(request, "Title for file already exists in database. Please input a new title")
                     return render(request, "upload_file.html", {"form": form})
 
@@ -194,10 +198,12 @@ def upload_file(request):
                     return redirect(reverse('file_app:profile')) # go back to profile page to see all the files
                 else:
                     # Delete corrupted file
+                    # TODO: Test reaching this error
                     file_instance.delete()
                     messages.error(request, "File integrity compromised during upload, try again")
 
             except ValidationError as e:
+                # TODO: Test reaching this error
                 messages.error(request, e.message)
     else:
         form = UploadFileForm()
@@ -215,10 +221,12 @@ def share_file(request, file_id):
 
         # Check if the file's owner is the current user
         if file_to_share.owner != request.user:
+            # TODO: Test reaching this error
             messages.error(request, "You can only share your own files.")
             return redirect('file_app:profile')
 
         if request.method == 'POST':
+            # TODO: Test POST method
             try:
                 form = ShareFileForm(request, request.POST)
                 if form.is_valid():
@@ -266,6 +274,7 @@ def download_file(request, file_id):
     """
     Download the file for the user. Login required to access function
     """
+    # TODO: Tests for this view and function
     try:
         file_obj = get_object_or_404(File, id=file_id)
         encryptor = FileEncryptor(file_obj.file_key)

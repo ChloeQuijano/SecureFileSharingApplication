@@ -24,6 +24,7 @@ class FileValidation(object):
                 'max_size': filesizeformat(self.max_size), 
                 'size': filesizeformat(fileObj.size),
             }
+            # TODO: Test reaching this error
             raise ValidationError(self.max_size_message, 'max_size', params)
 
         # checks against the type of the file
@@ -33,6 +34,7 @@ class FileValidation(object):
 
             if file_type not in self.file_types:
                 params = {'file_type': file_type, 'file_types': self.file_types }
+                # TODO: Test reaching this error
                 raise ValidationError(self.file_type_message, 'file_type', params)
         
         return fileObj
@@ -47,5 +49,6 @@ def has_permission(file, user):
         return True
 
     # Check if the file is shared with the user and has 'edit' permission
+    # TODO: Test reaching this error
     shared_file = SharedFile.objects.filter(file=file, user=user).first()
     return shared_file is not None
