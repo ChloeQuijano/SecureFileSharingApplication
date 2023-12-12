@@ -6,6 +6,9 @@ from django.test import TestCase, Client
 from django.contrib.auth.models import User  # For user authentication
 from django.core.files.base import ContentFile
 from django.urls import reverse
+from django.core.files.uploadedfile import SimpleUploadedFile
+from cryptography.fernet import Fernet
+from django.contrib.messages import get_messages
 from FileApp.forms import LoginForm, RegisterForm
 from FileApp.models import File
 from FileApp.views import *
@@ -35,7 +38,6 @@ class ViewsTestClass(TestCase):
         # checks that the login page contains the login form
         self.assertContains(response, '<form')
         self.assertIsInstance(response.context['form'], LoginForm)
-
 
 class UnauthenticatedViewsTestClass(TestCase):
     """Tests for views with user not logged in"""
@@ -71,7 +73,6 @@ class UnauthenticatedViewsTestClass(TestCase):
         url = reverse('file_app:share_file', args=[self.test_file.id])
         response = self.client.get(url)
         self.assertEqual(response.status_code, 302) #redirects user
-
 
 class AuthenticatedViewsTestClass(TestCase):
     """Tests for views with user logged in"""
@@ -156,7 +157,7 @@ class PostViewsTestClass(TestCase):
 
         # Check response is successful
         self.assertEqual(response.status_code, 200)
-    
+
     def test_register_post_invalid_form(self):
         """Test that the register page posts properly, invalid form"""
         data = {
@@ -172,7 +173,7 @@ class PostViewsTestClass(TestCase):
 
         # Check if the error message is displayed in the response content
         self.assertContains(response, "Form is invalid. Please check your input.")
-    
+
     @patch('bcrypt.checkpw', return_value=True)  # Mock the bcrypt.checkpw function
     def test_login_post_valid_form(self, mock_checkpw):
         """Test that the login page posts properly, valid form"""
@@ -187,7 +188,7 @@ class PostViewsTestClass(TestCase):
 
         # Check if the user is logged in
         self.assertTrue(response.wsgi_request.user.is_authenticated)
-    
+
     @patch('bcrypt.checkpw', return_value=False)  # Mock the bcrypt.checkpw function
     def test_login_post_invalid_form(self, mock_checkpw):
         """Test that the login page posts properly, invalid form"""
@@ -199,7 +200,7 @@ class PostViewsTestClass(TestCase):
 
         # Check if the form is not valid and the user is not redirected
         self.assertEqual(response.status_code, 200)
-    
+
     @patch('bcrypt.checkpw', return_value=False)  # Mock the bcrypt.checkpw function
     def test_login_post_invalid_form2(self, mock_checkpw):
         """Test that the login page posts properly, invalid form"""
@@ -225,7 +226,7 @@ class PostViewsTestClass(TestCase):
 
         # Check that response is successful
         self.assertEqual(response.status_code, 200)
-    
+
     def test_upload_post_invalid_form(self):
         """Test that the upload page posts properly, invalid form"""
         # Log in the user
@@ -241,7 +242,7 @@ class PostViewsTestClass(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_upload_post_invalid_form2(self):
-        """Test that the upload page posts properly, invalid form because file name already exists"""
+        """Test invalid form because file name already exists"""
         # Log in the user
         self.client.login(username='testuser', password='testpassword')
 
@@ -253,7 +254,7 @@ class PostViewsTestClass(TestCase):
 
         # check that the file is not uploaded because file name already exists
         self.assertEqual(response.status_code, 200)
-    
+
     def test_share_post_valid_form(self):
         """Test that the share page posts properly, valid form"""
         # Log in the user
@@ -271,7 +272,7 @@ class PostViewsTestClass(TestCase):
 
         # Check response is successful
         self.assertEqual(response.status_code, 200)
-    
+
     def test_share_post_invalid_form(self):
         """Test that the share page posts properly, invalid form"""
         # Log in the user
@@ -289,9 +290,9 @@ class PostViewsTestClass(TestCase):
 
         # Check if the form is not valid and the user is not redirected
         self.assertEqual(response.status_code, 200)
-    
+
     def test_share_post_invalid_form2(self):
-        """Test that the share page posts properly, invalid form because user already has permission"""
+        """Test invalid form because user already has permission"""
         # Log in the user
         self.client.login(username='testuser', password='testpassword')
 
@@ -316,9 +317,9 @@ class PostViewsTestClass(TestCase):
 
         # Check if the form is not valid and the user is not redirected
         self.assertEqual(response.status_code, 200)
-    
+
     def test_share_post_invalid_form3(self):
-        """Test that the share page posts properly, invalid form because user is the owner of the file"""
+        """Test invalid form because user is the owner of the file"""
         # Log in the user
         self.client.login(username='testuser', password='testpassword')
 
@@ -331,3 +332,73 @@ class PostViewsTestClass(TestCase):
 
         # Check that user is not redirected due to invalid form
         self.assertEqual(response.status_code, 200)
+
+class DownloadFileViewTests(TestCase):
+    """Tests for download_file view"""
+
+    @classmethod
+    def setUp(self):
+        """Set up for view tests"""
+        key_string = get_fernet_key()
+
+        # Create a test user
+        self.user = User.objects.create_user(
+            username="testuser",
+            password="testpassword"
+        )
+
+        # Create a test file and FileIntegrity record
+        self.file_content = b'This is a test file content.'
+        self.file_hash = hashlib.sha256(self.file_content).hexdigest()
+
+        # Encrypt the file content
+        fernet = Fernet(key_string)
+        encrypted_file_content = fernet.encrypt(self.file_content)
+
+        # Create a test file object
+        test_file = SimpleUploadedFile(
+            name="test_file.txt",
+            content=encrypted_file_content,
+            content_type="text/plain"
+        )
+
+        self.test_uploaded_file = File.objects.create(
+            owner=self.user,
+            file=test_file,
+            file_name="Test file",
+            file_size=test_file.size,
+        )
+
+        # Create a test file integrity instance
+        self.test_fileintegrity = FileIntegrity.objects.create(
+            file=self.test_uploaded_file,
+            sha256_hash=self.file_hash
+        )
+
+    def test_download_file_valid(self):
+        """Test that the file can be downloaded successfully"""
+
+        # Log in the user
+        self.client.login(username="testuser", password="testpassword")
+
+        # Attempt to download the file
+        response = self.client.get(
+            reverse("file_app:download_file", args=[self.test_uploaded_file.id])
+        )
+
+        # Check that response is successful because message returned does not contain an error message
+        messages = list(get_messages(response))
+        self.assertNotEqual(len(messages), 1)
+
+    def test_download_file_nonexistent(self):
+        """Test that a non-existent file cannot be downloaded"""
+        # Log in the user
+        self.client.login(username="testuser", password="testpassword")
+
+        # Attempt to download a non-existent file
+        response = self.client.get(
+            reverse("file_app:download_file", args=[999])
+        )
+
+        # Check that file does not exist by function redirecting
+        self.assertEqual(response.status_code, 302)

@@ -54,7 +54,7 @@ def register(request):
                 elif not reg.is_username_valid():
                     messages.error(request, "Username is not valid, must be alphanumeric and underscores ")
                 elif not reg.are_passwords_matching():
-                    messages.error("Passwords are not matching")
+                    messages.error(request, "Passwords are not matching")
                 else:
                     # passes all validations
                     hashed = reg.hash_password()
@@ -153,7 +153,13 @@ def upload_file(request):
         if form.is_valid():
             try:
                 # checks if file title already exists for the user
-                if File.objects.filter(owner=request.user, file_name=form.cleaned_data['title']).exists() or SharedFile.objects.filter(user=request.user, file__file_name = form.cleaned_data['title']).exists():
+                if File.objects.filter(
+                    owner=request.user,
+                    file_name=form.cleaned_data['title']
+                ).exists() or SharedFile.objects.filter(
+                    user=request.user,
+                    file__file_name = form.cleaned_data['title']
+                ).exists():
                     messages.error(request, "Title for file already exists in database. Please input a new title")
                     return render(request, "upload_file.html", {"form": form})
 
@@ -191,7 +197,8 @@ def upload_file(request):
                     messages.success(request, 'File is successfully uploaded.')
                     intergrity = FileIntegrity(file=file_instance, sha256_hash=hash_after_save)
                     intergrity.save()
-                    return redirect(reverse('file_app:profile')) # go back to profile page to see all the files
+                    # go back to profile page to see all the files
+                    return redirect(reverse('file_app:profile'))
                 else:
                     # Delete corrupted file
                     file_instance.delete()
@@ -246,7 +253,7 @@ def share_file(request, file_id):
                 # We may want to log the exception for further analysis
         else:
             form = ShareFileForm(request)
-        # In the template, we should list users and provide a way to select a user to share the file with
+        # list users and provide a way to select a user to share with
         users = User.objects.exclude(id=request.user.id)
         context = {
             'file': file_to_share,
@@ -267,11 +274,10 @@ def download_file(request, file_id):
     Download the file for the user. Login required to access function
     """
     try:
-        file_obj = get_object_or_404(File, id=file_id)
+        file_obj = File.objects.get(id=file_id)
         encryptor = FileEncryptor(file_obj.file_key)
         decrypted_file = encryptor.file_decrypt(file_obj.file)
-    
-        
+
         # Ensure the file pointer is at the beginning before reading
         decrypted_file.seek(0,0)
         decrypted_content = decrypted_file.read()
@@ -285,15 +291,19 @@ def download_file(request, file_id):
         # Calculate the hash digest of the file after download
         hash_after_download = hashlib.sha256(response.content).hexdigest()
 
-        # No two different inputs even with the slightest change have the same hash digest unless modified
+        # No two different inputs have the same hash
         if hash_bfr_download != hash_after_download: # report error if they are not the same
             messages.error(request, "File integrity has been compromised, cannot download this file")
             return redirect('file_app:profile')
 
         # returns if they are the same
+        messages.success(request, "File is successfully downloaded")
         return response
 
     except File.DoesNotExist as e:
         messages.error(request, f"File does not exist: {str(e)}")
         return redirect('file_app:profile')
-        
+
+    except Exception as e:
+        messages.error(request, f"An error occurred: {str(e)}")
+        return redirect('file_app:profile')

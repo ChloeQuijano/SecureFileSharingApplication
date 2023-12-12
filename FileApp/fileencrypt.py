@@ -10,7 +10,7 @@ class FileEncryptor():
     Class for file ecryption and decryption for upload and retrieval from database
     """
     def __init__(self,key) -> None:
-        self.key = key 
+        self.key = key
 
     def file_encrypt(self, original_file):
         """
@@ -35,7 +35,8 @@ class FileEncryptor():
 
     def file_decrypt(self, encrypted_file):
         """
-        Takes a File object input and decrypts the data within and rewrites it to a new file object for return
+        Takes a File object input and decrypts the data within 
+        rewrites it to a new file object for return
         """
         f = Fernet(self.key)
 

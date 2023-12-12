@@ -27,7 +27,7 @@ class LoginForm(forms.Form):
     Form for user login
     """
     username = forms.CharField(max_length=65)
-    password = forms.CharField(max_length=65, widget=forms.PasswordInput) 
+    password = forms.CharField(max_length=65, widget=forms.PasswordInput)
 
 class ShareFileForm(forms.Form):
     """

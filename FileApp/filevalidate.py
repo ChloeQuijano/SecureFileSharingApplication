@@ -1,7 +1,10 @@
+"""
+Class for validating the inputs for File Upload
+"""
 import magic
-from .models import SharedFile
 from django.template.defaultfilters import filesizeformat
 from django.core.exceptions import ValidationError
+from .models import SharedFile
 
 # max bytes for file type
 MAX_SIZE = 3 * (1024 * 1024)   # 3MB

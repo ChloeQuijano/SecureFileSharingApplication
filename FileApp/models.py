@@ -1,3 +1,6 @@
+"""
+This file contains the models for the FileApp app.
+"""
 from django.db import models
 from django.contrib.auth.models import User  # For user authentication
 
@@ -51,4 +54,5 @@ class SharedFile(models.Model):
         """Returns the username, filename and permission level"""
         return f"{self.user.username} - {self.file.file_name} ({self.permission})"
     class Meta:
+        """Meta class for SharedFile"""
         unique_together = ['user', 'file']  # Ensure each user can only share a file with a specific user once

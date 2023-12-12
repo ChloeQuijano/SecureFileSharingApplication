@@ -1,3 +1,6 @@
+"""
+Test cases for forms in FileApp app
+"""
 from unittest.mock import patch
 from django.test import TestCase, Client
 from django.core.files.base import ContentFile
@@ -26,8 +29,10 @@ class UploadFormTestClass(TestCase):
         """Test uploading file with valid inputs through POST request"""
         # log in user
         self.client.login(username='testuser', password='testpassword')
-        
-        response = self.client.post(reverse('file_app:upload_file'), {'title': 'Test Title', 'file': self.test_uploaded_file})
+
+        response = self.client.post(
+            reverse('file_app:upload_file'), {'title': 'Test Title', 'file': self.test_uploaded_file}
+        )
 
         # Check that the response is a redirect to profile page
         self.assertEqual(response.status_code, 302)
@@ -60,7 +65,7 @@ class UploadFormTestClass(TestCase):
         form = UploadFileForm(data=form_data)
         self.assertFalse(form.is_valid())
         self.assertIn('file', form.errors)
-    
+
     def test_empty_form(self):
         """Test the upload file form with no data"""
         # log in user
@@ -166,15 +171,15 @@ class LoginFormTestClass(TestCase):
 
     @patch('bcrypt.checkpw', return_value=False)  # Mock the bcrypt.checkpw function
     def test_invalid_credentials(self, mock_checkpw):
-        """Test logging in with invalid credentials through POST request"""
+        """Test logging in with invalid credentials"""
         response = self.client.post(reverse('file_app:login'), {
             'username': 'testuser',
             'password': 'invalidpassword'
         })
-        
+
         # Check that the response is not a redirect
         self.assertEqual(response.status_code, 200)
-        
+
         # Check that the error message is present
         messages = list(get_messages(response.wsgi_request))
         self.assertEqual(len(messages), 1)

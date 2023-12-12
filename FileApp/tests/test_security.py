@@ -1,10 +1,13 @@
+"""
+Test Validation and Registration security classes
+"""
 from django.test import TestCase, Client
-from FileApp.filevalidate import FileValidation, has_permission
-from FileApp.models import File
-from FileApp.userauth import Validation, UserRegistration
 from django.core.files.base import ContentFile
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User  # For user authentication
+from FileApp.filevalidate import FileValidation, has_permission
+from FileApp.models import File
+from FileApp.userauth import Validation, UserRegistration
 
 class TestValidation(TestCase):
     """Test Validation class"""
@@ -82,7 +85,7 @@ class TestUserRegistration(TestCase):
         # Create a user registration object
         test_user = UserRegistration(test_username, test_email, test_password, test_password)
 
-        # Check that the password is hashed by checking that it is not the same as the original password
+        # Check that the password is hashed and not the same
         hashed = test_user.hash_password()
         self.assertNotEqual(hashed, test_password)
 
@@ -159,7 +162,6 @@ class TestUserRegistration(TestCase):
         # Check that the username is invalid
         self.assertFalse(test_user.is_username_valid())
 
-
 class TestFileValidation(TestCase):
     """Test File Validation class"""
     @classmethod
@@ -181,7 +183,7 @@ class TestFileValidation(TestCase):
 
         # Check that the file size is valid
         self.assertTrue(self.validator(test_file))
-    
+
     def test_file_size_invalid(self):
         """Test that file size is invalid by being too large"""
         # create a test file object
@@ -191,7 +193,7 @@ class TestFileValidation(TestCase):
         # Check that the file size is invalid through a ValidationError
         with self.assertRaises(ValidationError):
             self.validator(test_file)
-    
+
     def test_file_type_valid(self):
         """Test that file type is valid"""
         # create a test file object
@@ -200,7 +202,7 @@ class TestFileValidation(TestCase):
 
         # Check that the file type is valid
         self.assertTrue(self.validator(test_file))
-    
+
     def test_has_permission_valid(self):
         """Test that user has permission"""
         # create a test file object
