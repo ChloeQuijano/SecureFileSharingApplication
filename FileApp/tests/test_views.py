@@ -1,6 +1,7 @@
 """
 Tests for page views
 """
+from unittest.mock import patch
 from django.test import TestCase, Client
 from django.contrib.auth.models import User  # For user authentication
 from django.core.files.base import ContentFile
@@ -123,3 +124,210 @@ class AuthenticatedViewsTestClass(TestCase):
 
         # checks that the share file page contains expected content
         self.assertContains(response, 'Share File')
+
+class PostViewsTestClass(TestCase):
+    """Tests for post views"""
+
+    @classmethod
+    def setUp(self):
+        """Set up for views"""
+        # user account created
+        self.user = User.objects.create_user(username='testuser', password='testpassword')
+
+        # create test file object
+        content = b'Test file content'
+        file_content = ContentFile(content, name='test_file.txt')
+        self.test_file = File.objects.create(
+            owner=self.user,
+            file=file_content,
+            file_name='Test file',
+            file_size=file_content.size
+        )
+
+    def test_register_post_valid_form(self):
+        """Test that the register page posts properly, valid form"""
+        data = {
+            "username": "newuser",
+            "email": "newuser@example.com",
+            "password1": "newpassword123",
+            "password2": "newpassword123",
+        }
+        response = self.client.post(reverse("file_app:register"), data)
+
+        # Check response is successful
+        self.assertEqual(response.status_code, 200)
+    
+    def test_register_post_invalid_form(self):
+        """Test that the register page posts properly, invalid form"""
+        data = {
+            "username": "newuser",
+            "email": "invalidemail",  # Invalid email format
+            "password1": "password123",
+            "password2": "password456",  # Passwords don't match
+        }
+        response = self.client.post(reverse("file_app:register"), data)
+
+        # Check if the form is not valid and the user is not redirected
+        self.assertEqual(response.status_code, 200)
+
+        # Check if the error message is displayed in the response content
+        self.assertContains(response, "Form is invalid. Please check your input.")
+    
+    @patch('bcrypt.checkpw', return_value=True)  # Mock the bcrypt.checkpw function
+    def test_login_post_valid_form(self, mock_checkpw):
+        """Test that the login page posts properly, valid form"""
+        data = {
+            "username": "testuser",
+            "password": "testpassword",
+        }
+        response = self.client.post(reverse("file_app:login"), data)
+
+        # Check response is successful and user is redirected
+        self.assertEqual(response.status_code, 302)
+
+        # Check if the user is logged in
+        self.assertTrue(response.wsgi_request.user.is_authenticated)
+    
+    @patch('bcrypt.checkpw', return_value=False)  # Mock the bcrypt.checkpw function
+    def test_login_post_invalid_form(self, mock_checkpw):
+        """Test that the login page posts properly, invalid form"""
+        data = {
+            "username": "testuser",
+            "password": "wrongpassword",  # Wrong password
+        }
+        response = self.client.post(reverse("file_app:login"), data)
+
+        # Check if the form is not valid and the user is not redirected
+        self.assertEqual(response.status_code, 200)
+    
+    @patch('bcrypt.checkpw', return_value=False)  # Mock the bcrypt.checkpw function
+    def test_login_post_invalid_form2(self, mock_checkpw):
+        """Test that the login page posts properly, invalid form"""
+        data = {
+            "username": "wrongusername",  # Wrong username
+            "password": "testpassword",
+        }
+        response = self.client.post(reverse("file_app:login"), data)
+
+        # Check if the form is not valid and the user is not redirected
+        self.assertEqual(response.status_code, 200)
+
+    def test_upload_post_valid_form(self):
+        """Test that the upload page posts properly, valid form"""
+        # Log in the user
+        self.client.login(username='testuser', password='testpassword')
+
+        data = {
+            "title": "Test file",
+            "file": "Test file content",
+        }
+        response = self.client.post(reverse("file_app:upload_file"), data)
+
+        # Check that response is successful
+        self.assertEqual(response.status_code, 200)
+    
+    def test_upload_post_invalid_form(self):
+        """Test that the upload page posts properly, invalid form"""
+        # Log in the user
+        self.client.login(username='testuser', password='testpassword')
+
+        data = {
+            "title": "Test file",
+            "file": "",  # No file uploaded
+        }
+        response = self.client.post(reverse("file_app:upload_file"), data)
+
+        # Check if the form is not valid and the user is not redirected
+        self.assertEqual(response.status_code, 200)
+
+    def test_upload_post_invalid_form2(self):
+        """Test that the upload page posts properly, invalid form because file name already exists"""
+        # Log in the user
+        self.client.login(username='testuser', password='testpassword')
+
+        data = {
+            "title": "Test file",
+            "file": "Test file content",
+        }
+        response = self.client.post(reverse("file_app:upload_file"), data)
+
+        # check that the file is not uploaded because file name already exists
+        self.assertEqual(response.status_code, 200)
+    
+    def test_share_post_valid_form(self):
+        """Test that the share page posts properly, valid form"""
+        # Log in the user
+        self.client.login(username='testuser', password='testpassword')
+
+        # Create a test user to share with
+        test_user2 = User.objects.create_user(username='testuser2', password='testpassword2')
+
+        data = {
+            "shared_user": test_user2.id,
+            "permission": "read",
+        }
+        url = reverse('file_app:share_file', args=[self.test_file.id])
+        response = self.client.post(url, data)
+
+        # Check response is successful
+        self.assertEqual(response.status_code, 200)
+    
+    def test_share_post_invalid_form(self):
+        """Test that the share page posts properly, invalid form"""
+        # Log in the user
+        self.client.login(username='testuser', password='testpassword')
+
+        # Create a test user to share with
+        test_user2 = User.objects.create_user(username='testuser2', password='testpassword2')
+
+        data = {
+            "shared_user": test_user2.id,
+            "permission": "invalid",  # Invalid permission
+        }
+        url = reverse('file_app:share_file', args=[self.test_file.id])
+        response = self.client.post(url, data)
+
+        # Check if the form is not valid and the user is not redirected
+        self.assertEqual(response.status_code, 200)
+    
+    def test_share_post_invalid_form2(self):
+        """Test that the share page posts properly, invalid form because user already has permission"""
+        # Log in the user
+        self.client.login(username='testuser', password='testpassword')
+
+        # Create a test user to share with
+        test_user2 = User.objects.create_user(username='testuser2', password='testpassword2')
+
+        data = {
+            "shared_user": test_user2.id,
+            "permission": "read",
+        }
+        url = reverse('file_app:share_file', args=[self.test_file.id])
+        response = self.client.post(url, data)
+
+        # Check valid response after sharing the file
+        self.assertEqual(response.status_code, 200)
+
+        # Check if the file is shared
+        self.assertTrue(SharedFile.objects.filter(user=test_user2).exists())
+
+        # Share the file again
+        response = self.client.post(url, data)
+
+        # Check if the form is not valid and the user is not redirected
+        self.assertEqual(response.status_code, 200)
+    
+    def test_share_post_invalid_form3(self):
+        """Test that the share page posts properly, invalid form because user is the owner of the file"""
+        # Log in the user
+        self.client.login(username='testuser', password='testpassword')
+
+        data = {
+            "shared_user": self.user.id,
+            "permission": "read",
+        }
+        url = reverse('file_app:share_file', args=[self.test_file.id])
+        response = self.client.post(url, data)
+
+        # Check that user is not redirected due to invalid form
+        self.assertEqual(response.status_code, 200)

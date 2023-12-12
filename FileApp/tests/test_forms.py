@@ -196,7 +196,7 @@ class ShareFileFormTestClass(TestCase):
         self.test_user = User.objects.create_user(username='testuser', password='testpassword')
         self.client = Client()
 
-    def test_form_initialization(self):
+    def test_form_initialization_valid(self):
         """Test form initialization with a request and without errors"""
         # log in user
         self.client.login(username='testuser', password='testpassword')
@@ -215,6 +215,15 @@ class ShareFileFormTestClass(TestCase):
             type(User.objects.exclude(id=self.test_user.id))
         ))
         self.assertEqual(form.fields['permission'].initial, 'read')
+
+    def test_form_initialization_invalid(self):
+        """Test form initialization with invalid request"""
+        # log in user
+        self.client.login(username='testuser', password='testpassword')
+
+        # Test the form with an invalid request and get ValueError
+        with self.assertRaises(ValueError):
+            ShareFileForm(request='invalid request')
 
     def test_valid_data(self):
         """Tests the shared file form with valid inputs"""

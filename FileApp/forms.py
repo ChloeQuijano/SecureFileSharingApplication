@@ -42,7 +42,6 @@ class ShareFileForm(forms.Form):
         elif hasattr(request, 'user'):
             user = request.user
         else:
-            # TODO: Test reaching this error
             raise ValueError("Invalid user_or_request argument")
 
         # Exclude current user

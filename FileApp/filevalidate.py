@@ -14,9 +14,10 @@ class FileValidation(object):
     file_type_message = "Files of type %(file_type)s are not supported. Allowed extensions are: '%(file_types)s'."
 
     def __init__(self, max_size=MAX_SIZE,file_types=()):
+        """create a file validator"""
         self.max_size = max_size
         self.file_types = file_types
-    
+
     def __call__(self, fileObj):
         # checks the max size of the file
         if self.max_size is not None and fileObj.size > self.max_size:
@@ -24,7 +25,6 @@ class FileValidation(object):
                 'max_size': filesizeformat(self.max_size), 
                 'size': filesizeformat(fileObj.size),
             }
-            # TODO: Test reaching this error
             raise ValidationError(self.max_size_message, 'max_size', params)
 
         # checks against the type of the file
@@ -34,12 +34,9 @@ class FileValidation(object):
 
             if file_type not in self.file_types:
                 params = {'file_type': file_type, 'file_types': self.file_types }
-                # TODO: Test reaching this error
                 raise ValidationError(self.file_type_message, 'file_type', params)
-        
+
         return fileObj
-
-
 
 def has_permission(file, user):
     """
@@ -49,6 +46,5 @@ def has_permission(file, user):
         return True
 
     # Check if the file is shared with the user and has 'edit' permission
-    # TODO: Test reaching this error
     shared_file = SharedFile.objects.filter(file=file, user=user).first()
     return shared_file is not None
