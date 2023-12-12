@@ -1,5 +1,4 @@
-# SecureFileSharingApplication
-SEP300 Group Assignment: Secure File Sharing Application
+# Secure File Sharing Application
 
 Django application with PostgresSQL database that allows secure file sharing between users
 
