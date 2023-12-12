@@ -86,3 +86,7 @@ This generates a `.coverage` file. To convert the file to an html for viewing, r
 Running and creating pylint report:
 
 `pylint FileApp > pylint.txt`
+
+### Other Notes
+
+Creation of admin account to check back-end: `python manage.py createsuperuser`

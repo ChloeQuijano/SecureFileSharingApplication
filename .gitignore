@@ -10,3 +10,4 @@ uploads/*
 htmlcov/*
 .coverage
 pylint.txt
+testlogininfo.txt
